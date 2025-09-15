@@ -47,6 +47,7 @@ export interface ApiResponse<T> {
   data?: T;
   code?: string;
   message?: string;
+  errors?: string[];
 }
 
 // 多子网查询结果类型

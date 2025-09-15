@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { execDigCommand } from '@/lib/dig-service';
 import { logError } from '@/lib/log';
 import { subnetMap, SubnetInfo } from '@/lib/dig-map';
+import { validateApiParams } from '@/lib/validation';
 
 export async function POST(request: NextRequest) {
   let requestBody: any = {};
@@ -10,9 +11,15 @@ export async function POST(request: NextRequest) {
     const { domain, recordType = 'A', subnet } = body;
     requestBody = { domain, recordType, subnet };
 
-    if (!domain) {
+    // 验证请求参数
+    const validation = validateApiParams({ domain, recordType, subnet });
+    if (!validation.isValid) {
       return NextResponse.json(
-        { code: 'DomainRequired', message: 'Domain parameter is required' },
+        { 
+          code: 'InvalidParameters', 
+          message: '参数验证失败',
+          errors: validation.errors
+        },
         { status: 400 }
       );
     }
@@ -87,6 +94,18 @@ export async function POST(request: NextRequest) {
       error: error.message,
       stack: error.stack
     });
+    
+    // 根据错误类型返回不同的错误码
+    if (error.message.includes('validation') || error.message.includes('参数')) {
+      return NextResponse.json(
+        { 
+          code: 'InvalidParameters', 
+          message: '参数验证失败' 
+        },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
       { 
         code: 'DigCommandFailed', 

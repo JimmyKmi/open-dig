@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { DigResult, ApiResponse, MultiSubnetQueryResult, SubnetQueryResult, FailedSubnetQueryResult } from '@/types/dig';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Combobox, ComboboxOption } from '@/components/ui/combobox';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, CheckCircle2, Search, X } from 'lucide-react';
-import { QueryResultSkeleton, MultiQueryResultSkeleton } from '@/components/ui/query-skeleton';
+import {useState, useEffect, useMemo} from 'react';
+import {DigResult, ApiResponse, MultiSubnetQueryResult, SubnetQueryResult, FailedSubnetQueryResult} from '@/types/dig';
+import {Button} from '@/components/ui/button';
+import {Input} from '@/components/ui/input';
+import {Combobox, ComboboxOption} from '@/components/ui/combobox';
+import {Badge} from '@/components/ui/badge';
+import {Alert, AlertDescription, AlertTitle} from '@/components/ui/alert';
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui/table';
+import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
+import {AlertCircle, CheckCircle2, Search, X} from 'lucide-react';
+import {QueryResultSkeleton, MultiQueryResultSkeleton} from '@/components/ui/query-skeleton';
+import {validateDomain} from '@/lib/utils';
 
 export default function Home() {
   const [domain, setDomain] = useState('');
@@ -22,6 +23,12 @@ export default function Home() {
   const [systemStatus, setSystemStatus] = useState<{
     digAvailable: boolean;
   } | null>(null);
+
+  // 域名验证状态
+  const [domainValidation, setDomainValidation] = useState<{
+    isValid: boolean;
+    error?: string;
+  }>({isValid: false});
 
   // 筛选状态
   const [filters, setFilters] = useState({
@@ -35,22 +42,22 @@ export default function Home() {
 
 
   const recordTypes: ComboboxOption[] = [
-    { value: 'A', label: 'A' },
-    { value: 'AAAA', label: 'AAAA' },
-    { value: 'CNAME', label: 'CNAME' },
-    { value: 'MX', label: 'MX' },
-    { value: 'NS', label: 'NS' },
-    { value: 'TXT', label: 'TXT' },
-    { value: 'SOA', label: 'SOA' },
-    { value: 'PTR', label: 'PTR' },
-    { value: 'SRV', label: 'SRV' }
+    {value: 'A', label: 'A'},
+    {value: 'AAAA', label: 'AAAA'},
+    {value: 'CNAME', label: 'CNAME'},
+    {value: 'MX', label: 'MX'},
+    {value: 'NS', label: 'NS'},
+    {value: 'TXT', label: 'TXT'},
+    {value: 'SOA', label: 'SOA'},
+    {value: 'PTR', label: 'PTR'},
+    {value: 'SRV', label: 'SRV'}
   ];
 
   // 聚合解析结果，以IP为key去重
   const aggregateResults = (results: SubnetQueryResult[]) => {
     const ipMap = new Map<string, any>();
 
-    results.forEach(({ result, subnetInfo }) => {
+    results.forEach(({result, subnetInfo}) => {
       if (result.parsed.answer) {
         result.parsed.answer.forEach((record: any) => {
           if (record.type === 'A' || record.type === 'AAAA') {
@@ -82,7 +89,7 @@ export default function Home() {
   // 生成所有IP的逗号分隔文本
   const generateIpListText = (results: SubnetQueryResult[]) => {
     const ipSet = new Set<string>();
-    results.forEach(({ result }) => {
+    results.forEach(({result}) => {
       if (result.parsed.answer) {
         result.parsed.answer.forEach((record: any) => {
           if (record.type === 'A' || record.type === 'AAAA') {
@@ -97,40 +104,40 @@ export default function Home() {
   // 获取唯一值列表用于筛选选项
   const getUniqueValues = (multiResult: MultiSubnetQueryResult) => {
     const allResults = [...multiResult.successfulResults, ...multiResult.failedResults];
-    
+
     // 处理空白值，将空字符串或null/undefined显示为"<为空>"
     const processValues = (values: string[]) => {
       const processed = values.map(value => value || '<为空>');
       return [...new Set(processed)].sort();
     };
-    
+
     const countries = processValues(allResults.map(item => item.subnetInfo.country));
     const regions = processValues(allResults.map(item => item.subnetInfo.region));
     const provinces = processValues(allResults.map(item => item.subnetInfo.province));
     const isps = processValues(allResults.map(item => item.subnetInfo.isp));
     const codes = processValues(multiResult.successfulResults.map(item => item.result.parsed.status));
-    
-    return { countries, regions, provinces, isps, codes };
+
+    return {countries, regions, provinces, isps, codes};
   };
 
   // 创建带全选选项的Combobox选项
   const createComboboxOptions = (values: string[]) => {
     const options = [
-      { value: '', label: '<全选>' }
+      {value: '', label: '<全选>'}
     ];
     values.forEach(value => {
-      options.push({ value, label: value });
+      options.push({value, label: value});
     });
     return options;
   };
 
   // 筛选结果
   const filteredResults = useMemo(() => {
-    if (!multiResult) return { successfulResults: [], failedResults: [] };
+    if (!multiResult) return {successfulResults: [], failedResults: []};
 
     const filterItem = (item: SubnetQueryResult | FailedSubnetQueryResult) => {
-      const { country, region, province, isp, code, ipSearch } = filters;
-      
+      const {country, region, province, isp, code, ipSearch} = filters;
+
       // 基本字段筛选
       if (country) {
         const itemCountry = item.subnetInfo.country || '';
@@ -152,7 +159,7 @@ export default function Home() {
         const filterIsp = isp === '<为空>' ? '' : isp;
         if (itemIsp !== filterIsp) return false;
       }
-      
+
       // 代码筛选（只对成功结果有效）
       if (code && 'result' in item) {
         const itemCode = item.result.parsed.status || '';
@@ -161,17 +168,17 @@ export default function Home() {
       } else if (code && !('result' in item)) {
         return false; // 失败结果没有代码
       }
-      
+
       // IP搜索（在成功结果中搜索解析出的IP）
       if (ipSearch && 'result' in item) {
-        const hasMatchingIP = item.result.parsed.answer?.some((record: any) => 
+        const hasMatchingIP = item.result.parsed.answer?.some((record: any) =>
           record.rdata.toLowerCase().includes(ipSearch.toLowerCase())
         );
         if (!hasMatchingIP) return false;
       } else if (ipSearch && !('result' in item)) {
         return false; // 失败结果没有IP
       }
-      
+
       return true;
     };
 
@@ -214,6 +221,16 @@ export default function Home() {
     checkStatus();
   }, []);
 
+  // 域名输入变化时的实时验证
+  useEffect(() => {
+    if (domain.trim()) {
+      const validation = validateDomain(domain);
+      setDomainValidation(validation);
+    } else {
+      setDomainValidation({isValid: false});
+    }
+  }, [domain]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!domain.trim()) return;
@@ -238,6 +255,10 @@ export default function Home() {
       const data: ApiResponse<DigResult | MultiSubnetQueryResult> = await response.json();
 
       if (!response.ok) {
+        // 处理验证错误
+        if (data.code === 'InvalidParameters' && data.errors) {
+          throw new Error(`参数验证失败: ${data.errors.join(', ')}`);
+        }
         throw new Error(data.message || 'DNS查询失败');
       }
 
@@ -263,11 +284,12 @@ export default function Home() {
 
           {systemStatus?.digAvailable === false && (
             <div className="mt-4 space-y-2">
-              <Badge variant={systemStatus.digAvailable ? "default" : "destructive"} className="inline-flex items-center gap-2">
+              <Badge variant={systemStatus.digAvailable ? "default" : "destructive"}
+                     className="inline-flex items-center gap-2">
                 {systemStatus.digAvailable ? (
-                  <CheckCircle2 className="h-3 w-3" />
+                  <CheckCircle2 className="h-3 w-3"/>
                 ) : (
-                  <AlertCircle className="h-3 w-3" />
+                  <AlertCircle className="h-3 w-3"/>
                 )}
                 'DIG工具路径设置错误，未找到工具'
               </Badge>
@@ -275,11 +297,11 @@ export default function Home() {
           )}
         </header>
 
-        <div>
-          <div className="p-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_200px_200px] gap-4">
-                <div className="space-y-2">
+        <div className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_200px_200px] gap-4">
+              <div className="space-y-2">
+                <div className="relative">
                   <Input
                     type="text"
                     id="domain"
@@ -287,45 +309,66 @@ export default function Home() {
                     onChange={(e) => setDomain(e.target.value)}
                     placeholder="example.com"
                     required
+                    className={`pr-10 ${
+                      domain.trim() && !domainValidation.isValid
+                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                        : domain.trim() && domainValidation.isValid
+                          ? 'border-green-500 focus:border-green-500 focus:ring-green-500'
+                          : ''
+                    }`}
                   />
+                  {domain.trim() && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      {domainValidation.isValid ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500"/>
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-500"/>
+                      )}
+                    </div>
+                  )}
                 </div>
-
-                <div className="space-y-2">
-                  <Combobox
-                    options={recordTypes}
-                    value={recordType}
-                    onValueChange={setRecordType}
-                    placeholder="选择记录类型"
-                    searchPlaceholder="搜索记录类型..."
-                    emptyText="未找到记录类型"
-                    className="w-full"
-                    popoverClassName="w-[200px]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Button
-                    type="submit"
-                    disabled={loading || !domain.trim()}
-                    className="w-full"
-                  >
-                    {loading ? '查询中...' : 'DIG'}
-                  </Button>
-                </div>
+                {domain.trim() && !domainValidation.isValid && domainValidation.error && (
+                  <p className="text-sm text-red-500">{domainValidation.error}</p>
+                )}
               </div>
-            </form>
-          </div>
+
+              <div className="space-y-2">
+                <Combobox
+                  options={recordTypes}
+                  value={recordType}
+                  onValueChange={setRecordType}
+                  placeholder="选择记录类型"
+                  searchPlaceholder="搜索记录类型..."
+                  emptyText="未找到记录类型"
+                  className="w-full"
+                  popoverClassName="w-[200px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Button
+                  type="submit"
+                  disabled={loading || !domain.trim() || !domainValidation.isValid}
+                  className="w-full"
+                >
+                  {loading ? '查询中...' : 'DIG'}
+                </Button>
+              </div>
+            </div>
+          </form>
         </div>
 
         {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>查询失败</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <div className="p-6">
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4"/>
+              <AlertTitle>查询失败</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </div>
         )}
 
         {loading && (
-          <MultiQueryResultSkeleton />
+          <MultiQueryResultSkeleton/>
         )}
 
         {!loading && result && (
@@ -375,7 +418,7 @@ export default function Home() {
                     <div>
                       <h3 className="text-sm font-medium mb-2">查询状态</h3>
                       <Alert>
-                        <AlertCircle className="h-4 w-4" />
+                        <AlertCircle className="h-4 w-4"/>
                         <AlertTitle>状态: {result.parsed.status}</AlertTitle>
                       </Alert>
                     </div>
@@ -468,7 +511,7 @@ export default function Home() {
                             value={generateIpListText(filteredResults.successfulResults)}
                             readOnly
                             className="w-full font-mono text-xs border border-input bg-background px-3 py-2 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            style={{ 
+                            style={{
                               height: 'auto',
                               minHeight: '200px',
                               maxHeight: '70vh'
@@ -487,13 +530,16 @@ export default function Home() {
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-2">
                                   <div className="max-w-[200px] flex flex-col gap-1">
                                     <div>
-                                      <span className="font-medium">IP:</span> <a className="font-mono text-muted-foreground">{ipResult.ip}</a>
+                                      <span className="font-medium">IP:</span> <a
+                                      className="font-mono text-muted-foreground">{ipResult.ip}</a>
                                     </div>
                                     <div>
-                                      <span className="font-medium">TYPE:</span> <a className="font-mono text-muted-foreground">{ipResult.type}</a>
+                                      <span className="font-medium">TYPE:</span> <a
+                                      className="font-mono text-muted-foreground">{ipResult.type}</a>
                                     </div>
                                     <div>
-                                      <span className="font-medium">TTL:</span> <a className="font-mono text-muted-foreground">{ipResult.ttl}</a>
+                                      <span className="font-medium">TTL:</span> <a
+                                      className="font-mono text-muted-foreground">{ipResult.ttl}</a>
                                     </div>
                                   </div>
                                   <div className="col-span-3 flex flex-col">
@@ -530,7 +576,7 @@ export default function Home() {
                           onClick={resetFilters}
                           className="h-8 px-2"
                         >
-                          <X className="h-3 w-3 mr-1" />
+                          <X className="h-3 w-3 mr-1"/>
                           重置
                         </Button>
                       </div>
@@ -540,7 +586,7 @@ export default function Home() {
                           <Combobox
                             options={createComboboxOptions(getUniqueValues(multiResult).countries)}
                             value={filters.country}
-                            onValueChange={(value) => setFilters(prev => ({ ...prev, country: value }))}
+                            onValueChange={(value) => setFilters(prev => ({...prev, country: value}))}
                             placeholder="选择国家"
                             searchPlaceholder="搜索国家..."
                             emptyText="未找到国家"
@@ -552,7 +598,7 @@ export default function Home() {
                           <Combobox
                             options={createComboboxOptions(getUniqueValues(multiResult).regions)}
                             value={filters.region}
-                            onValueChange={(value) => setFilters(prev => ({ ...prev, region: value }))}
+                            onValueChange={(value) => setFilters(prev => ({...prev, region: value}))}
                             placeholder="选择大区"
                             searchPlaceholder="搜索大区..."
                             emptyText="未找到大区"
@@ -564,7 +610,7 @@ export default function Home() {
                           <Combobox
                             options={createComboboxOptions(getUniqueValues(multiResult).provinces)}
                             value={filters.province}
-                            onValueChange={(value) => setFilters(prev => ({ ...prev, province: value }))}
+                            onValueChange={(value) => setFilters(prev => ({...prev, province: value}))}
                             placeholder="选择省份"
                             searchPlaceholder="搜索省份..."
                             emptyText="未找到省份"
@@ -576,7 +622,7 @@ export default function Home() {
                           <Combobox
                             options={createComboboxOptions(getUniqueValues(multiResult).isps)}
                             value={filters.isp}
-                            onValueChange={(value) => setFilters(prev => ({ ...prev, isp: value }))}
+                            onValueChange={(value) => setFilters(prev => ({...prev, isp: value}))}
                             placeholder="选择ISP"
                             searchPlaceholder="搜索ISP..."
                             emptyText="未找到ISP"
@@ -588,7 +634,7 @@ export default function Home() {
                           <Combobox
                             options={createComboboxOptions(getUniqueValues(multiResult).codes)}
                             value={filters.code}
-                            onValueChange={(value) => setFilters(prev => ({ ...prev, code: value }))}
+                            onValueChange={(value) => setFilters(prev => ({...prev, code: value}))}
                             placeholder="选择代码"
                             searchPlaceholder="搜索代码..."
                             emptyText="未找到代码"
@@ -598,11 +644,11 @@ export default function Home() {
                         <div className="space-y-2">
                           <label className="text-xs font-medium text-muted-foreground">IP搜索</label>
                           <div className="relative">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"/>
                             <Input
                               placeholder="搜索IP地址..."
                               value={filters.ipSearch}
-                              onChange={(e) => setFilters(prev => ({ ...prev, ipSearch: e.target.value }))}
+                              onChange={(e) => setFilters(prev => ({...prev, ipSearch: e.target.value}))}
                               className="pl-8"
                             />
                           </div>
