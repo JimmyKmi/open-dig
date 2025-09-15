@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { execDigCommand } from '@/lib/dig-service';
+import { logError } from '@/lib/log';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
       data: result,
     });
   } catch (error: any) {
-    console.error('Dig command error:', error);
+    logError('Dig command error:', error);
     return NextResponse.json(
       { 
         code: 'DigCommandFailed', 

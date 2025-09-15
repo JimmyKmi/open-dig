@@ -1,37 +1,9 @@
 import {exec} from 'child_process';
 import {promisify} from 'util';
 import {DigOptions, DigResult} from '@/types/dig';
+import {logInfo, logDebug, logStartupInfo} from '@/lib/log';
 
 const execAsync = promisify(exec);
-
-// 日志辅助函数
-const isDebugMode = () => process.env.DEBUG === 'true';
-
-const logInfo = (message: string, ...args: any[]) => {
-  console.log(`[OpenDig] ${message}`, ...args);
-};
-
-const logDebug = (message: string, ...args: any[]) => {
-  if (isDebugMode()) {
-    console.log(`[OpenDig Debug] ${message}`, ...args);
-  }
-};
-
-// 启动时输出系统信息
-let startupInfoLogged = false;
-const logStartupInfo = () => {
-  if (!startupInfoLogged) {
-    const digPath = process.env.BIND_PATH || '/usr/bin/dig';
-    const platform = process.platform;
-
-    logInfo('系统信息:');
-    logInfo(`  平台: ${platform}`);
-    logInfo(`  dig路径: ${digPath}`);
-    logInfo(`  调试模式: ${isDebugMode() ? '开启' : '关闭'}`);
-
-    startupInfoLogged = true;
-  }
-};
 
 // 解析传统 dig 文本输出
 function parseDigTextOutput(output: string): any {
