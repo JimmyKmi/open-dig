@@ -147,9 +147,8 @@ export async function execDigCommand(options: DigOptions): Promise<DigResult> {
   const quotedDigPath = digPath.includes(' ') || process.platform === 'win32'
     ? `"${digPath}"` : digPath;
 
-  // 首先尝试使用 +json 选项
-  let useJsonFormat = true;
-  let command = `${quotedDigPath} +json ${domain} ${recordType} @${dnsServer}`;
+  // 构建dig命令
+  const command = `${quotedDigPath} ${domain} ${recordType} @${dnsServer}`;
 
   // 记录执行的命令（调试模式）
   logDebug(`执行命令: ${command}`);
@@ -157,44 +156,12 @@ export async function execDigCommand(options: DigOptions): Promise<DigResult> {
   try {
     const {stdout, stderr} = await execAsync(command);
 
-    if (stderr && stderr.includes('Invalid option: +json')) {
-      // 如果不支持 +json，则使用传统格式
-      useJsonFormat = false;
-      command = `${quotedDigPath} ${domain} ${recordType} @${dnsServer}`;
-
-      logDebug(`切换到传统格式，重新执行命令: ${command}`);
-
-      // 重新执行命令
-      const {stdout: textOutput, stderr: textStderr} = await execAsync(command);
-
-      if (textStderr && !textStderr.includes('WARNING')) {
-        throw new Error(`Dig command error: ${textStderr}`);
-      }
-
-      const parsed = parseDigTextOutput(textOutput);
-      logDebug('解析结果:', parsed);
-
-      return {
-        command,
-        output: textOutput,
-        parsed,
-      };
-    }
-
     if (stderr && !stderr.includes('WARNING')) {
       throw new Error(`Dig command error: ${stderr}`);
     }
 
-    // 尝试解析 JSON 输出
-    let parsed;
-    try {
-      parsed = JSON.parse(stdout);
-      logDebug('JSON解析结果:', parsed);
-    } catch (parseError) {
-      // 如果不是 JSON 格式，使用文本解析
-      parsed = parseDigTextOutput(stdout);
-      logDebug('文本解析结果:', parsed);
-    }
+    const parsed = parseDigTextOutput(stdout);
+    logDebug('解析结果:', parsed);
 
     return {
       command,
@@ -202,40 +169,6 @@ export async function execDigCommand(options: DigOptions): Promise<DigResult> {
       parsed,
     };
   } catch (error: any) {
-    // 如果是 JSON 命令失败且包含 Invalid option，尝试传统格式
-    if (useJsonFormat && error.message.includes('Invalid option: +json')) {
-      command = `${quotedDigPath} ${domain}`;
-
-      if (recordType) {
-        command += ` ${recordType}`;
-      }
-
-      if (dnsServer) {
-        command += ` @${dnsServer}`;
-      }
-
-      logDebug(`JSON模式失败，切换到传统格式: ${command}`);
-
-      try {
-        const {stdout, stderr} = await execAsync(command);
-
-        if (stderr && !stderr.includes('WARNING')) {
-          throw new Error(`Dig command error: ${stderr}`);
-        }
-
-        const parsed = parseDigTextOutput(stdout);
-        logDebug('重试解析结果:', parsed);
-
-        return {
-          command,
-          output: stdout,
-          parsed,
-        };
-      } catch (retryError: any) {
-        throw new Error(`Failed to execute dig command: ${retryError.message}`);
-      }
-    }
-
     throw new Error(`Failed to execute dig command: ${error.message}`);
   }
 }
