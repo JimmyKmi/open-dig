@@ -48,3 +48,36 @@ export interface ApiResponse<T> {
   code?: string;
   message?: string;
 }
+
+// 多子网查询结果类型
+export interface MultiSubnetQueryResult {
+  successfulResults: SubnetQueryResult[];
+  failedResults: FailedSubnetQueryResult[];
+  totalQueries: number;
+  successCount: number;
+  failureCount: number;
+}
+
+export interface SubnetQueryResult {
+  subnetInfo: {
+    country: string;
+    region: string;
+    province: string;
+    isp: string;
+    subnet: string;
+  };
+  result: DigResult;
+  success: true;
+}
+
+export interface FailedSubnetQueryResult {
+  subnetInfo: {
+    country: string;
+    region: string;
+    province: string;
+    isp: string;
+    subnet: string;
+  };
+  error: string;
+  success: false;
+}
