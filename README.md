@@ -55,7 +55,7 @@ brew install bind
 # Windows示例:
 BIND_PATH=C:\Program Files\ISC BIND 9\bin\dig.exe
 # 或者（如果路径包含空格）:
-BIND_PATH=C:\Users\jimmy\Downloads\bin\dig.exe
+BIND_PATH=D:\bind9\bin\dig.exe
 
 # Linux示例:
 BIND_PATH=/usr/bin/dig

@@ -11,6 +11,7 @@ import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/c
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import {AlertCircle, CheckCircle2, Search, X} from 'lucide-react';
 import {QueryResultSkeleton, MultiQueryResultSkeleton} from '@/components/ui/query-skeleton';
+import {Footer} from '@/components/ui/footer';
 import {validateDomain} from '@/lib/utils';
 
 export default function Home() {
@@ -729,6 +730,7 @@ export default function Home() {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 }
