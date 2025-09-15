@@ -217,10 +217,9 @@ export async function execDigCommand(options: DigOptions): Promise<DigResult> {
     command += ` +subnet=${subnet}`;
   }
   command += ` @${dnsServer}`;
-  console.log('execDigCommand', command);
 
   // 记录执行的命令（调试模式）
-  logDebug(`执行命令: ${command}`);
+  logDebug(`run: ${command}`);
 
   try {
     const {stdout, stderr} = await execAsync(command);

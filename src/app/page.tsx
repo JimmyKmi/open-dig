@@ -28,7 +28,7 @@ export default function Home() {
   // 聚合解析结果，以IP为key去重
   const aggregateResults = (results: SubnetQueryResult[]) => {
     const ipMap = new Map<string, any>();
-    
+
     results.forEach(({ result, subnetInfo }) => {
       if (result.parsed.answer) {
         result.parsed.answer.forEach((record: any) => {
@@ -54,7 +54,7 @@ export default function Home() {
         });
       }
     });
-    
+
     return Array.from(ipMap.values());
   };
 
@@ -65,7 +65,7 @@ export default function Home() {
         const response = await fetch('/api/status');
         const data = await response.json();
         if (data.success) {
-          setSystemStatus({ 
+          setSystemStatus({
             digAvailable: data.data.digAvailable
           });
         }
@@ -122,7 +122,7 @@ export default function Home() {
         <header className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">OpenDig</h1>
           <p className="text-muted-foreground">本工具可探测各个地区运营商的 DNS 解析情况</p>
-          
+
           {systemStatus && (
             <div className="mt-4 space-y-2">
               <Badge variant={systemStatus.digAvailable ? "default" : "destructive"} className="inline-flex items-center gap-2">
@@ -144,25 +144,19 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <label htmlFor="domain" className="text-sm font-medium">
-                    域名 *
-                  </label>
                   <Input
                     type="text"
                     id="domain"
                     value={domain}
                     onChange={(e) => setDomain(e.target.value)}
-                    placeholder="例如: example.com"
+                    placeholder="example.com"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="recordType" className="text-sm font-medium">
-                    记录类型
-                  </label>
                   <Select value={recordType} onValueChange={setRecordType}>
                     <SelectTrigger>
                       <SelectValue placeholder="选择记录类型" />
@@ -176,15 +170,16 @@ export default function Home() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Button
+                    type="submit"
+                    disabled={loading || !domain.trim()}
+                    className="w-full"
+                  >
+                    {loading ? '查询中...' : '执行DNS查询'}
+                  </Button>
+                </div>
               </div>
-
-              <Button
-                type="submit"
-                disabled={loading || !domain.trim()}
-                className="w-full"
-              >
-                {loading ? '查询中...' : '执行DNS查询'}
-              </Button>
             </form>
           </CardContent>
         </Card>
@@ -206,97 +201,97 @@ export default function Home() {
               <CardContent>
                 <div className="space-y-4">
 
-                {result.parsed.answer && result.parsed.answer.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">解析结果 ({result.parsed.answer.length} 条记录)</h3>
-                    <Card>
-                      <CardContent className="p-3">
-                        <div className="space-y-2">
-                          {result.parsed.answer.map((record: any, index: number) => (
-                            <div key={index} className="bg-muted rounded p-2 text-sm">
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                <div>
-                                  <span className="font-medium">域名:</span>
-                                  <div className="text-muted-foreground">{record.name}</div>
-                                </div>
-                                <div>
-                                  <span className="font-medium">类型:</span>
-                                  <div className="text-muted-foreground">{record.type}</div>
-                                </div>
-                                <div>
-                                  <span className="font-medium">TTL:</span>
-                                  <div className="text-muted-foreground">{record.ttl}</div>
-                                </div>
-                                <div>
-                                  <span className="font-medium">值:</span>
-                                  <div className="text-muted-foreground break-all">{record.rdata}</div>
+                  {result.parsed.answer && result.parsed.answer.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">解析结果 ({result.parsed.answer.length} 条记录)</h3>
+                      <Card>
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            {result.parsed.answer.map((record: any, index: number) => (
+                              <div key={index} className="bg-muted rounded p-2 text-sm">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                  <div>
+                                    <span className="font-medium">域名:</span>
+                                    <div className="text-muted-foreground">{record.name}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">类型:</span>
+                                    <div className="text-muted-foreground">{record.type}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">TTL:</span>
+                                    <div className="text-muted-foreground">{record.ttl}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">值:</span>
+                                    <div className="text-muted-foreground break-all">{record.rdata}</div>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  {result.parsed.status && result.parsed.status !== 'SUCCESS' && (
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">查询状态</h3>
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>状态: {result.parsed.status}</AlertTitle>
+                      </Alert>
+                    </div>
+                  )}
+
+                  {result.parsed.authority && result.parsed.authority.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">权威记录 ({result.parsed.authority.length} 条)</h3>
+                      <Card>
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            {result.parsed.authority.map((record: any, index: number) => (
+                              <div key={index} className="bg-muted rounded p-2 text-sm">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                  <div>
+                                    <span className="font-medium">域名:</span>
+                                    <div className="text-muted-foreground">{record.name}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">类型:</span>
+                                    <div className="text-muted-foreground">{record.type}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">TTL:</span>
+                                    <div className="text-muted-foreground">{record.ttl}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">值:</span>
+                                    <div className="text-muted-foreground break-all">{record.rdata}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">完整输出</h3>
+                    <Card>
+                      <CardContent className="p-3">
+                        <div className="bg-muted rounded-md p-3 max-h-96 overflow-y-auto">
+                          <pre className="text-xs whitespace-pre-wrap">
+                            {result.output}
+                          </pre>
                         </div>
                       </CardContent>
                     </Card>
                   </div>
-                )}
-
-                {result.parsed.status && result.parsed.status !== 'SUCCESS' && (
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">查询状态</h3>
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>状态: {result.parsed.status}</AlertTitle>
-                    </Alert>
-                  </div>
-                )}
-
-                {result.parsed.authority && result.parsed.authority.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">权威记录 ({result.parsed.authority.length} 条)</h3>
-                    <Card>
-                      <CardContent className="p-3">
-                        <div className="space-y-2">
-                          {result.parsed.authority.map((record: any, index: number) => (
-                            <div key={index} className="bg-muted rounded p-2 text-sm">
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                <div>
-                                  <span className="font-medium">域名:</span>
-                                  <div className="text-muted-foreground">{record.name}</div>
-                                </div>
-                                <div>
-                                  <span className="font-medium">类型:</span>
-                                  <div className="text-muted-foreground">{record.type}</div>
-                                </div>
-                                <div>
-                                  <span className="font-medium">TTL:</span>
-                                  <div className="text-muted-foreground">{record.ttl}</div>
-                                </div>
-                                <div>
-                                  <span className="font-medium">值:</span>
-                                  <div className="text-muted-foreground break-all">{record.rdata}</div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-
-
-                <div>
-                  <h3 className="text-sm font-medium mb-2">完整输出</h3>
-                  <Card>
-                    <CardContent className="p-3">
-                      <div className="bg-muted rounded-md p-3 max-h-96 overflow-y-auto">
-                        <pre className="text-xs whitespace-pre-wrap">
-                          {result.output}
-                        </pre>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
                 </div>
               </CardContent>
             </Card>
@@ -308,7 +303,7 @@ export default function Home() {
             <Card>
               <CardHeader>
                 <CardTitle>
-                  多子网查询结果 
+                  多子网查询结果
                   <span className="text-sm font-normal text-muted-foreground ml-2">
                     (成功: {multiResult.successCount}/{multiResult.totalQueries})
                   </span>
@@ -324,7 +319,7 @@ export default function Home() {
                       查询状态详情 ({multiResult.successCount}/{multiResult.totalQueries})
                     </TabsTrigger>
                   </TabsList>
-                  
+
                   <TabsContent value="results" className="space-y-4">
                     {multiResult.successfulResults.length > 0 ? (
                       <Card>
@@ -332,28 +327,27 @@ export default function Home() {
                           <div className="space-y-3">
                             {aggregateResults(multiResult.successfulResults).map((ipResult: any, index: number) => (
                               <div key={index} className="bg-muted rounded p-3 text-sm">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-2">
-                                  <div>
-                                    <span className="font-medium">IP地址:</span>
-                                    <div className="font-mono text-muted-foreground">{ipResult.ip}</div>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-2">
+                                  <div className="max-w-[200px] flex flex-col gap-1">
+                                    <div>
+                                      <span className="font-medium">IP:</span> <a className="font-mono text-muted-foreground">{ipResult.ip}</a>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium">TYPE:</span> <a className="font-mono text-muted-foreground">{ipResult.type}</a>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium">TTL:</span> <a className="font-mono text-muted-foreground">{ipResult.ttl}</a>
+                                    </div>
                                   </div>
                                   <div>
-                                    <span className="font-medium">类型:</span>
-                                    <div className="text-muted-foreground">{ipResult.type}</div>
-                                  </div>
-                                  <div>
-                                    <span className="font-medium">TTL:</span>
-                                    <div className="text-muted-foreground">{ipResult.ttl}</div>
-                                  </div>
-                                </div>
-                                <div>
-                                  <span className="font-medium">来源地区 ({ipResult.sources.length} 个):</span>
-                                  <div className="mt-1 flex flex-wrap gap-1">
-                                    {ipResult.sources.map((source: any, sourceIndex: number) => (
-                                      <Badge key={sourceIndex} variant="secondary" className="text-xs">
-                                        {source.country} {source.province} {source.isp}
-                                      </Badge>
-                                    ))}
+                                    <span className="font-medium">来源地区 ({ipResult.sources.length} 个):</span>
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                      {ipResult.sources.map((source: any, sourceIndex: number) => (
+                                        <Badge key={sourceIndex} variant="secondary" className="text-xs">
+                                          {source.country} {source.province} {source.isp}
+                                        </Badge>
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -367,7 +361,7 @@ export default function Home() {
                       </div>
                     )}
                   </TabsContent>
-                  
+
                   <TabsContent value="status" className="space-y-4">
                     <Card>
                       <CardHeader>
@@ -381,18 +375,28 @@ export default function Home() {
                               <TableHead>大区</TableHead>
                               <TableHead>省份</TableHead>
                               <TableHead>ISP</TableHead>
-                              <TableHead>状态</TableHead>
+                              <TableHead>代码</TableHead>
+                              <TableHead></TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {multiResult.successfulResults.map((item, index) => (
                               <TableRow key={index}>
-                                <TableCell>{item.subnetInfo.country}</TableCell>
-                                <TableCell>{item.subnetInfo.region}</TableCell>
-                                <TableCell>{item.subnetInfo.province}</TableCell>
-                                <TableCell>{item.subnetInfo.isp}</TableCell>
-                                <TableCell>
-                                  <Badge variant="default">成功</Badge>
+                                <TableCell className="max-w-[50px]">{item.subnetInfo.country}</TableCell>
+                                <TableCell className="max-w-[50px]">{item.subnetInfo.region}</TableCell>
+                                <TableCell className="max-w-[50px]">{item.subnetInfo.province}</TableCell>
+                                <TableCell className="max-w-[100px]">{item.subnetInfo.isp}</TableCell>
+                                <TableCell className="max-w-[50px]">
+                                  <Badge variant={item.result.parsed.status === 'NOERROR' ? "default" : "secondary"}>
+                                    {item.result.parsed.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="max-w-60">
+                                  <div className="bg-muted rounded p-2 max-h-40 overflow-x-auto overflow-y-auto">
+                                    <pre className="text-xs">
+                                      {item.result.output}
+                                    </pre>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -403,58 +407,11 @@ export default function Home() {
                                 <TableCell>{item.subnetInfo.province}</TableCell>
                                 <TableCell>{item.subnetInfo.isp}</TableCell>
                                 <TableCell>
-                                  <Badge variant="destructive">失败</Badge>
+                                  <Badge variant="destructive">ERROR</Badge>
                                 </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>完整输出详情</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-0">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>国家</TableHead>
-                              <TableHead>大区</TableHead>
-                              <TableHead>省份</TableHead>
-                              <TableHead>ISP</TableHead>
-                              <TableHead>完整输出</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {multiResult.successfulResults.map((item, index) => (
-                              <TableRow key={index}>
-                                <TableCell>{item.subnetInfo.country}</TableCell>
-                                <TableCell>{item.subnetInfo.region}</TableCell>
-                                <TableCell>{item.subnetInfo.province}</TableCell>
-                                <TableCell>{item.subnetInfo.isp}</TableCell>
-                                <TableCell>
-                                  <details className="cursor-pointer">
-                                    <summary className="text-primary hover:text-primary/80">查看输出</summary>
-                                    <div className="mt-2 bg-muted rounded p-2 max-h-40 overflow-y-auto">
-                                      <pre className="text-xs whitespace-pre-wrap">
-                                        {item.result.output}
-                                      </pre>
-                                    </div>
-                                  </details>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                            {multiResult.failedResults.map((item, index) => (
-                              <TableRow key={`failed-${index}`}>
-                                <TableCell>{item.subnetInfo.country}</TableCell>
-                                <TableCell>{item.subnetInfo.region}</TableCell>
-                                <TableCell>{item.subnetInfo.province}</TableCell>
-                                <TableCell>{item.subnetInfo.isp}</TableCell>
                                 <TableCell>
                                   <div className="text-destructive text-xs">
-                                    错误: {item.error}
+                                    ERROR: {item.error}
                                   </div>
                                 </TableCell>
                               </TableRow>
