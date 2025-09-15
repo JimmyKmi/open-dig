@@ -160,15 +160,7 @@ export async function execDigCommand(options: DigOptions): Promise<DigResult> {
     if (stderr && stderr.includes('Invalid option: +json')) {
       // 如果不支持 +json，则使用传统格式
       useJsonFormat = false;
-      command = `${quotedDigPath} ${domain}`;
-
-      if (recordType) {
-        command += ` ${recordType}`;
-      }
-
-      if (dnsServer) {
-        command += ` @${dnsServer}`;
-      }
+      command = `${quotedDigPath} ${domain} ${recordType} @${dnsServer}`;
 
       logDebug(`切换到传统格式，重新执行命令: ${command}`);
 
