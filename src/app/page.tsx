@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { DigResult, ApiResponse, MultiSubnetQueryResult, SubnetQueryResult, FailedSubnetQueryResult } from '@/types/dig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,7 +22,17 @@ export default function Home() {
     digAvailable: boolean;
   } | null>(null);
 
-  const recordTypes = ['A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'SOA', 'PTR', 'SRV'];
+  const recordTypes: ComboboxOption[] = [
+    { value: 'A', label: 'A' },
+    { value: 'AAAA', label: 'AAAA' },
+    { value: 'CNAME', label: 'CNAME' },
+    { value: 'MX', label: 'MX' },
+    { value: 'NS', label: 'NS' },
+    { value: 'TXT', label: 'TXT' },
+    { value: 'SOA', label: 'SOA' },
+    { value: 'PTR', label: 'PTR' },
+    { value: 'SRV', label: 'SRV' }
+  ];
 
   // 聚合解析结果，以IP为key去重
   const aggregateResults = (results: SubnetQueryResult[]) => {
@@ -117,13 +126,13 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background py-8">
+    <div className="min-h-screen bg-background py-16">
       <div className="max-w-6xl mx-auto px-4">
         <header className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">OpenDig</h1>
           <p className="text-muted-foreground">本工具可探测各个地区运营商的 DNS 解析情况</p>
 
-          {systemStatus && (
+          {systemStatus?.digAvailable === false && (
             <div className="mt-4 space-y-2">
               <Badge variant={systemStatus.digAvailable ? "default" : "destructive"} className="inline-flex items-center gap-2">
                 {systemStatus.digAvailable ? (
@@ -131,20 +140,16 @@ export default function Home() {
                 ) : (
                   <AlertCircle className="h-3 w-3" />
                 )}
-                {systemStatus.digAvailable ? '已就绪' : 'DIG工具路径设置错误，未找到工具'}
+                'DIG工具路径设置错误，未找到工具'
               </Badge>
             </div>
           )}
         </header>
 
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>DNS 查询</CardTitle>
-            <CardDescription>输入域名和查询参数来执行 DNS 解析</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <div>
+          <div className="p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_200px_200px] gap-4">
                 <div className="space-y-2">
                   <Input
                     type="text"
@@ -157,18 +162,16 @@ export default function Home() {
                 </div>
 
                 <div className="space-y-2">
-                  <Select value={recordType} onValueChange={setRecordType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="选择记录类型" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {recordTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Combobox
+                    options={recordTypes}
+                    value={recordType}
+                    onValueChange={setRecordType}
+                    placeholder="选择记录类型"
+                    searchPlaceholder="搜索记录类型..."
+                    emptyText="未找到记录类型"
+                    className="w-full"
+                    popoverClassName="w-[200px]"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Button
@@ -181,8 +184,8 @@ export default function Home() {
                 </div>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {error && (
           <Alert variant="destructive" className="mb-6">
@@ -194,18 +197,18 @@ export default function Home() {
 
         {result && (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>查询结果</CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="border rounded-lg bg-background">
+              <div className="p-6">
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold">查询结果</h2>
+                </div>
                 <div className="space-y-4">
 
                   {result.parsed.answer && result.parsed.answer.length > 0 && (
                     <div>
                       <h3 className="text-sm font-medium mb-2">解析结果 ({result.parsed.answer.length} 条记录)</h3>
-                      <Card>
-                        <CardContent className="p-3">
+                      <div className="border rounded-lg bg-background">
+                        <div className="p-3">
                           <div className="space-y-2">
                             {result.parsed.answer.map((record: any, index: number) => (
                               <div key={index} className="bg-muted rounded p-2 text-sm">
@@ -230,8 +233,8 @@ export default function Home() {
                               </div>
                             ))}
                           </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -248,8 +251,8 @@ export default function Home() {
                   {result.parsed.authority && result.parsed.authority.length > 0 && (
                     <div>
                       <h3 className="text-sm font-medium mb-2">权威记录 ({result.parsed.authority.length} 条)</h3>
-                      <Card>
-                        <CardContent className="p-3">
+                      <div className="border rounded-lg bg-background">
+                        <div className="p-3">
                           <div className="space-y-2">
                             {result.parsed.authority.map((record: any, index: number) => (
                               <div key={index} className="bg-muted rounded p-2 text-sm">
@@ -274,42 +277,42 @@ export default function Home() {
                               </div>
                             ))}
                           </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
                     </div>
                   )}
 
 
                   <div>
                     <h3 className="text-sm font-medium mb-2">完整输出</h3>
-                    <Card>
-                      <CardContent className="p-3">
+                    <div className="border rounded-lg bg-background">
+                      <div className="p-3">
                         <div className="bg-muted rounded-md p-3 max-h-96 overflow-y-auto">
                           <pre className="text-xs whitespace-pre-wrap">
                             {result.output}
                           </pre>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         )}
 
         {multiResult && (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  多子网查询结果
-                  <span className="text-sm font-normal text-muted-foreground ml-2">
-                    (成功: {multiResult.successCount}/{multiResult.totalQueries})
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div>
+              <div className="p-6">
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold">
+                    多子网查询结果
+                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                      (成功: {multiResult.successCount}/{multiResult.totalQueries})
+                    </span>
+                  </h2>
+                </div>
                 <Tabs defaultValue="results" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="results">
@@ -322,11 +325,11 @@ export default function Home() {
 
                   <TabsContent value="results" className="space-y-4">
                     {multiResult.successfulResults.length > 0 ? (
-                      <Card>
-                        <CardContent className="p-3">
+                      <div className="border rounded-lg bg-background">
+                        <div className="p-3 bg-zinc-500/10">
                           <div className="space-y-3">
                             {aggregateResults(multiResult.successfulResults).map((ipResult: any, index: number) => (
-                              <div key={index} className="bg-muted rounded p-3 text-sm">
+                              <div key={index} className="bg-white dark:bg-black rounded py-1 px-3 text-sm">
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-2">
                                   <div className="max-w-[200px] flex flex-col gap-1">
                                     <div>
@@ -339,8 +342,8 @@ export default function Home() {
                                       <span className="font-medium">TTL:</span> <a className="font-mono text-muted-foreground">{ipResult.ttl}</a>
                                     </div>
                                   </div>
-                                  <div>
-                                    <span className="font-medium">来源地区 ({ipResult.sources.length} 个):</span>
+                                  <div className="col-span-3 flex flex-col">
+                                    <span className="font-medium">{ipResult.sources.length} 个来源:</span>
                                     <div className="mt-1 flex flex-wrap gap-1">
                                       {ipResult.sources.map((source: any, sourceIndex: number) => (
                                         <Badge key={sourceIndex} variant="secondary" className="text-xs">
@@ -353,8 +356,8 @@ export default function Home() {
                               </div>
                             ))}
                           </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
                         暂无解析结果
@@ -363,11 +366,8 @@ export default function Home() {
                   </TabsContent>
 
                   <TabsContent value="status" className="space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>查询状态详情</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-0">
+                    <div className="border rounded-lg bg-background">
+                      <div className="p-6">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -418,12 +418,12 @@ export default function Home() {
                             ))}
                           </TableBody>
                         </Table>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   </TabsContent>
                 </Tabs>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         )}
       </div>
