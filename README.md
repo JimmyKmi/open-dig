@@ -13,4 +13,5 @@ The project was inspired by a friend who recommended the site <https://mdig.cc/>
 
 # Document
 For more document, visit https://lzj.ac.cn/docs/open-dig/[https://lzj.ac.cn/en/docs/open-dig/]
+
 项目详细文档放在了 https://lzj.ac.cn/docs/open-dig/[https://lzj.ac.cn/docs/open-dig/]
