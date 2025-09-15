@@ -14,7 +14,13 @@ ENV NEXT_SWC=0 \
 COPY package*.json ./
 # 安装所有依赖（包括开发依赖）用于构建
 RUN npm ci --legacy-peer-deps
-COPY src/app/api/status .
+COPY src ./src
+COPY public ./public
+COPY next.config.ts ./
+COPY next-env.d.ts ./
+COPY tsconfig.json ./
+COPY postcss.config.mjs ./
+COPY components.json ./
 RUN npm run build
 
 # Stage 2: 生产环境运行
@@ -28,7 +34,7 @@ RUN apk add --no-cache bind-tools
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
+# COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
