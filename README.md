@@ -65,7 +65,23 @@ BIND_PATH=/usr/local/bin/dig
 
 # 如果dig在系统PATH中，可以简单设置为:
 BIND_PATH=dig
+
+# 调试模式（可选）
+DEBUG=true
 ```
+
+#### dig 版本兼容性
+
+本程序支持新旧两种版本的 dig 工具：
+
+**新版本 (支持 +json)**
+- 自动使用 JSON 格式输出，解析更准确
+- BIND 9.16+ 版本支持
+
+**老版本 (不支持 +json)**
+- 自动回退到文本格式输出
+- 使用内置解析器处理传统格式
+- 支持所有版本的 dig 工具
 
 #### Windows 特别说明
 
@@ -77,6 +93,33 @@ BIND_PATH=dig
 常见的 Windows dig 工具位置：
 - BIND 9 安装后通常在: `C:\Program Files\ISC BIND 9\bin\dig.exe`
 - 手动下载的版本: `C:\Users\用户名\Downloads\bin\dig.exe`
+
+#### 故障排除
+
+如果遇到 "Invalid option: +json" 错误：
+- 这是正常现象，程序会自动切换到兼容模式
+- 老版本 dig 工具不支持 JSON 输出，但仍能正常工作
+
+#### 调试模式
+
+启用调试模式以获取详细的执行信息：
+
+1. 在 `.env.local` 中设置 `DEBUG=true`
+2. 重启应用程序
+3. 查看控制台输出，包含：
+   - 执行的 dig 命令
+   - 解析结果详情
+   - 错误诊断信息
+
+**启动时输出（始终显示）：**
+- 系统平台信息
+- dig 工具路径
+- 调试模式状态
+
+**调试模式输出（仅 DEBUG=true 时）：**
+- 每次查询的具体命令
+- dig 输出解析结果
+- 版本切换过程
 
 ## 安装和运行
 

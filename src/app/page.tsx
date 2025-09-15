@@ -12,11 +12,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [systemStatus, setSystemStatus] = useState<{
     digAvailable: boolean;
-    digPath: string;
-    status: string;
-    version?: string;
-    error?: string;
-    platform?: string;
   } | null>(null);
 
   const recordTypes = ['A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'SOA', 'PTR', 'SRV'];
@@ -28,7 +23,7 @@ export default function Home() {
         const response = await fetch('/api/status');
         const data = await response.json();
         if (data.success) {
-          setSystemStatus(data.data);
+          setSystemStatus({ digAvailable: data.data.digAvailable });
         }
       } catch (err) {
         console.error('Failed to check system status:', err);
@@ -84,7 +79,7 @@ export default function Home() {
           <p className="text-gray-600">基于dig工具的DNS查询Web界面</p>
           
           {systemStatus && (
-            <div className="mt-4 space-y-2">
+            <div className="mt-4">
               <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
                 systemStatus.digAvailable 
                   ? 'bg-green-100 text-green-800' 
@@ -93,20 +88,7 @@ export default function Home() {
                 <div className={`w-2 h-2 rounded-full mr-2 ${
                   systemStatus.digAvailable ? 'bg-green-500' : 'bg-red-500'
                 }`}></div>
-                {systemStatus.status}
-              </div>
-              
-              <div className="text-xs text-gray-600 space-y-1">
-                <div><strong>路径:</strong> {systemStatus.digPath}</div>
-                {systemStatus.platform && (
-                  <div><strong>平台:</strong> {systemStatus.platform}</div>
-                )}
-                {systemStatus.version && (
-                  <div><strong>版本:</strong> {systemStatus.version}</div>
-                )}
-                {systemStatus.error && (
-                  <div className="text-red-600"><strong>错误:</strong> {systemStatus.error}</div>
-                )}
+                {systemStatus.digAvailable ? 'dig工具已就绪' : 'dig工具未找到'}
               </div>
             </div>
           )}
@@ -195,20 +177,78 @@ export default function Home() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">查询结果</h2>
               
               <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">执行的命令</h3>
-                  <div className="bg-gray-100 rounded-md p-3">
-                    <code className="text-sm text-gray-800">{result.command}</code>
-                  </div>
-                </div>
 
                 {result.parsed.answer && result.parsed.answer.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">解析结果</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">解析结果 ({result.parsed.answer.length} 条记录)</h3>
                     <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                      <pre className="text-sm text-green-800 whitespace-pre-wrap">
-                        {formatJsonOutput(result.parsed.answer)}
-                      </pre>
+                      <div className="space-y-2">
+                        {result.parsed.answer.map((record: any, index: number) => (
+                          <div key={index} className="bg-white rounded p-2 text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              <div>
+                                <span className="font-medium text-green-800">域名:</span>
+                                <div className="text-green-700">{record.name}</div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-green-800">类型:</span>
+                                <div className="text-green-700">{record.type}</div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-green-800">TTL:</span>
+                                <div className="text-green-700">{record.ttl}</div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-green-800">值:</span>
+                                <div className="text-green-700 break-all">{record.rdata}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {result.parsed.status && result.parsed.status !== 'SUCCESS' && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">查询状态</h3>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                      <div className="text-sm text-yellow-800">
+                        状态: <span className="font-medium">{result.parsed.status}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {result.parsed.authority && result.parsed.authority.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">权威记录 ({result.parsed.authority.length} 条)</h3>
+                    <div className="bg-purple-50 border border-purple-200 rounded-md p-3">
+                      <div className="space-y-2">
+                        {result.parsed.authority.map((record: any, index: number) => (
+                          <div key={index} className="bg-white rounded p-2 text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              <div>
+                                <span className="font-medium text-purple-800">域名:</span>
+                                <div className="text-purple-700">{record.name}</div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-purple-800">类型:</span>
+                                <div className="text-purple-700">{record.type}</div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-purple-800">TTL:</span>
+                                <div className="text-purple-700">{record.ttl}</div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-purple-800">值:</span>
+                                <div className="text-purple-700 break-all">{record.rdata}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
