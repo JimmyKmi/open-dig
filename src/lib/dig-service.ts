@@ -15,6 +15,7 @@ function parseDigTextOutput(output: string): any {
     authority: [],
     additional: [],
     subnet: null,
+    lastCname: null, // 最后一跳cname
   };
 
   let currentSection = 'header';
@@ -82,6 +83,11 @@ function parseDigTextOutput(output: string): any {
           rdata: parts.slice(4).join(' '),
         };
         result.answer.push(record);
+        
+        // 跟踪最后一跳cname
+        if (record.type === 'CNAME') {
+          result.lastCname = record.rdata;
+        }
       }
     }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DigResult, ApiResponse, MultiSubnetQueryResult, SubnetQueryResult, FailedSubnetQueryResult } from '@/types/dig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Search, X } from 'lucide-react';
+import { QueryResultSkeleton, MultiQueryResultSkeleton } from '@/components/ui/query-skeleton';
 
 export default function Home() {
   const [domain, setDomain] = useState('');
@@ -21,6 +22,17 @@ export default function Home() {
   const [systemStatus, setSystemStatus] = useState<{
     digAvailable: boolean;
   } | null>(null);
+
+  // 筛选状态
+  const [filters, setFilters] = useState({
+    country: '',
+    region: '',
+    province: '',
+    isp: '',
+    code: '',
+    ipSearch: ''
+  });
+
 
   const recordTypes: ComboboxOption[] = [
     { value: 'A', label: 'A' },
@@ -65,6 +77,123 @@ export default function Home() {
     });
 
     return Array.from(ipMap.values());
+  };
+
+  // 生成所有IP的逗号分隔文本
+  const generateIpListText = (results: SubnetQueryResult[]) => {
+    const ipSet = new Set<string>();
+    results.forEach(({ result }) => {
+      if (result.parsed.answer) {
+        result.parsed.answer.forEach((record: any) => {
+          if (record.type === 'A' || record.type === 'AAAA') {
+            ipSet.add(record.rdata);
+          }
+        });
+      }
+    });
+    return Array.from(ipSet).join(',');
+  };
+
+  // 获取唯一值列表用于筛选选项
+  const getUniqueValues = (multiResult: MultiSubnetQueryResult) => {
+    const allResults = [...multiResult.successfulResults, ...multiResult.failedResults];
+    
+    // 处理空白值，将空字符串或null/undefined显示为"<为空>"
+    const processValues = (values: string[]) => {
+      const processed = values.map(value => value || '<为空>');
+      return [...new Set(processed)].sort();
+    };
+    
+    const countries = processValues(allResults.map(item => item.subnetInfo.country));
+    const regions = processValues(allResults.map(item => item.subnetInfo.region));
+    const provinces = processValues(allResults.map(item => item.subnetInfo.province));
+    const isps = processValues(allResults.map(item => item.subnetInfo.isp));
+    const codes = processValues(multiResult.successfulResults.map(item => item.result.parsed.status));
+    
+    return { countries, regions, provinces, isps, codes };
+  };
+
+  // 创建带全选选项的Combobox选项
+  const createComboboxOptions = (values: string[]) => {
+    const options = [
+      { value: '', label: '<全选>' }
+    ];
+    values.forEach(value => {
+      options.push({ value, label: value });
+    });
+    return options;
+  };
+
+  // 筛选结果
+  const filteredResults = useMemo(() => {
+    if (!multiResult) return { successfulResults: [], failedResults: [] };
+
+    const filterItem = (item: SubnetQueryResult | FailedSubnetQueryResult) => {
+      const { country, region, province, isp, code, ipSearch } = filters;
+      
+      // 基本字段筛选
+      if (country) {
+        const itemCountry = item.subnetInfo.country || '';
+        const filterCountry = country === '<为空>' ? '' : country;
+        if (itemCountry !== filterCountry) return false;
+      }
+      if (region) {
+        const itemRegion = item.subnetInfo.region || '';
+        const filterRegion = region === '<为空>' ? '' : region;
+        if (itemRegion !== filterRegion) return false;
+      }
+      if (province) {
+        const itemProvince = item.subnetInfo.province || '';
+        const filterProvince = province === '<为空>' ? '' : province;
+        if (itemProvince !== filterProvince) return false;
+      }
+      if (isp) {
+        const itemIsp = item.subnetInfo.isp || '';
+        const filterIsp = isp === '<为空>' ? '' : isp;
+        if (itemIsp !== filterIsp) return false;
+      }
+      
+      // 代码筛选（只对成功结果有效）
+      if (code && 'result' in item) {
+        const itemCode = item.result.parsed.status || '';
+        const filterCode = code === '<为空>' ? '' : code;
+        if (itemCode !== filterCode) return false;
+      } else if (code && !('result' in item)) {
+        return false; // 失败结果没有代码
+      }
+      
+      // IP搜索（在成功结果中搜索解析出的IP）
+      if (ipSearch && 'result' in item) {
+        const hasMatchingIP = item.result.parsed.answer?.some((record: any) => 
+          record.rdata.toLowerCase().includes(ipSearch.toLowerCase())
+        );
+        if (!hasMatchingIP) return false;
+      } else if (ipSearch && !('result' in item)) {
+        return false; // 失败结果没有IP
+      }
+      
+      return true;
+    };
+
+    return {
+      successfulResults: multiResult.successfulResults.filter(filterItem),
+      failedResults: multiResult.failedResults.filter(filterItem),
+      totalQueries: multiResult.totalQueries,
+      successCount: multiResult.successfulResults.filter(filterItem).length,
+      failureCount: multiResult.failedResults.filter(filterItem).length
+    };
+  }, [multiResult, filters]);
+
+  // 重置筛选
+  const resetFilters = () => {
+    setFilters({
+      country: '',
+      region: '',
+      province: '',
+      isp: '',
+      code: '',
+      ipSearch: ''
+    });
   };
 
   // 检查系统状态
@@ -127,7 +256,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background py-16">
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4">
         <header className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">OpenDig</h1>
           <p className="text-muted-foreground">本工具可探测各个地区运营商的 DNS 解析情况</p>
@@ -179,7 +308,7 @@ export default function Home() {
                     disabled={loading || !domain.trim()}
                     className="w-full"
                   >
-                    {loading ? '查询中...' : '执行DNS查询'}
+                    {loading ? '查询中...' : 'DIG'}
                   </Button>
                 </div>
               </div>
@@ -195,7 +324,11 @@ export default function Home() {
           </Alert>
         )}
 
-        {result && (
+        {loading && (
+          <MultiQueryResultSkeleton />
+        )}
+
+        {!loading && result && (
           <div className="space-y-6">
             <div className="border rounded-lg bg-background">
               <div className="p-6">
@@ -221,10 +354,10 @@ export default function Home() {
                                     <span className="font-medium">类型:</span>
                                     <div className="text-muted-foreground">{record.type}</div>
                                   </div>
-                                  <div>
+                                  {/* <div>
                                     <span className="font-medium">TTL:</span>
                                     <div className="text-muted-foreground">{record.ttl}</div>
-                                  </div>
+                                  </div> */}
                                   <div>
                                     <span className="font-medium">值:</span>
                                     <div className="text-muted-foreground break-all">{record.rdata}</div>
@@ -301,7 +434,7 @@ export default function Home() {
           </div>
         )}
 
-        {multiResult && (
+        {!loading && multiResult && (
           <div className="space-y-6">
             <div>
               <div className="p-6">
@@ -309,26 +442,47 @@ export default function Home() {
                   <h2 className="text-lg font-semibold">
                     多子网查询结果
                     <span className="text-sm font-normal text-muted-foreground ml-2">
-                      (成功: {multiResult.successCount}/{multiResult.totalQueries})
+                      (成功: {filteredResults.successCount}/{filteredResults.totalQueries})
                     </span>
                   </h2>
                 </div>
                 <Tabs defaultValue="results" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="results">
-                      聚合解析结果 ({aggregateResults(multiResult.successfulResults).length} 个IP)
+                      聚合解析结果 ({aggregateResults(filteredResults.successfulResults).length} 个IP)
                     </TabsTrigger>
                     <TabsTrigger value="status">
-                      查询状态详情 ({multiResult.successCount}/{multiResult.totalQueries})
+                      查询状态详情 ({filteredResults.successCount}/{filteredResults.totalQueries})
                     </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="results" className="space-y-4">
-                    {multiResult.successfulResults.length > 0 ? (
+                    {/* IP列表输入框 */}
+                    {filteredResults.successfulResults.length > 0 && (
+                      <div className="border rounded-lg bg-background">
+                        <div className="p-4">
+                          <div className="mb-2">
+                            <h3 className="text-sm font-medium">所有IP列表 (逗号分隔)</h3>
+                          </div>
+                          <textarea
+                            value={generateIpListText(filteredResults.successfulResults)}
+                            readOnly
+                            className="w-full font-mono text-xs border border-input bg-background px-3 py-2 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            style={{ 
+                              height: 'auto',
+                              minHeight: '200px',
+                              maxHeight: '70vh'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {filteredResults.successfulResults.length > 0 ? (
                       <div className="border rounded-lg bg-background">
                         <div className="p-3 bg-zinc-500/10">
                           <div className="space-y-3">
-                            {aggregateResults(multiResult.successfulResults).map((ipResult: any, index: number) => (
+                            {aggregateResults(filteredResults.successfulResults).map((ipResult: any, index: number) => (
                               <div key={index} className="bg-white dark:bg-black rounded py-1 px-3 text-sm">
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-2">
                                   <div className="max-w-[200px] flex flex-col gap-1">
@@ -366,6 +520,96 @@ export default function Home() {
                   </TabsContent>
 
                   <TabsContent value="status" className="space-y-4">
+                    {/* 筛选UI */}
+                    <div className="border rounded-lg bg-background p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-medium">筛选条件</h3>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={resetFilters}
+                          className="h-8 px-2"
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          重置
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-muted-foreground">国家</label>
+                          <Combobox
+                            options={createComboboxOptions(getUniqueValues(multiResult).countries)}
+                            value={filters.country}
+                            onValueChange={(value) => setFilters(prev => ({ ...prev, country: value }))}
+                            placeholder="选择国家"
+                            searchPlaceholder="搜索国家..."
+                            emptyText="未找到国家"
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-muted-foreground">大区</label>
+                          <Combobox
+                            options={createComboboxOptions(getUniqueValues(multiResult).regions)}
+                            value={filters.region}
+                            onValueChange={(value) => setFilters(prev => ({ ...prev, region: value }))}
+                            placeholder="选择大区"
+                            searchPlaceholder="搜索大区..."
+                            emptyText="未找到大区"
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-muted-foreground">省份</label>
+                          <Combobox
+                            options={createComboboxOptions(getUniqueValues(multiResult).provinces)}
+                            value={filters.province}
+                            onValueChange={(value) => setFilters(prev => ({ ...prev, province: value }))}
+                            placeholder="选择省份"
+                            searchPlaceholder="搜索省份..."
+                            emptyText="未找到省份"
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-muted-foreground">ISP</label>
+                          <Combobox
+                            options={createComboboxOptions(getUniqueValues(multiResult).isps)}
+                            value={filters.isp}
+                            onValueChange={(value) => setFilters(prev => ({ ...prev, isp: value }))}
+                            placeholder="选择ISP"
+                            searchPlaceholder="搜索ISP..."
+                            emptyText="未找到ISP"
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-muted-foreground">代码</label>
+                          <Combobox
+                            options={createComboboxOptions(getUniqueValues(multiResult).codes)}
+                            value={filters.code}
+                            onValueChange={(value) => setFilters(prev => ({ ...prev, code: value }))}
+                            placeholder="选择代码"
+                            searchPlaceholder="搜索代码..."
+                            emptyText="未找到代码"
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-muted-foreground">IP搜索</label>
+                          <div className="relative">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="搜索IP地址..."
+                              value={filters.ipSearch}
+                              onChange={(e) => setFilters(prev => ({ ...prev, ipSearch: e.target.value }))}
+                              className="pl-8"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="border rounded-lg bg-background">
                       <div className="p-6">
                         <Table>
@@ -376,20 +620,26 @@ export default function Home() {
                               <TableHead>省份</TableHead>
                               <TableHead>ISP</TableHead>
                               <TableHead>代码</TableHead>
+                              <TableHead>最后一跳CNAME</TableHead>
                               <TableHead></TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {multiResult.successfulResults.map((item, index) => (
+                            {filteredResults.successfulResults.map((item, index) => (
                               <TableRow key={index}>
-                                <TableCell className="max-w-[50px]">{item.subnetInfo.country}</TableCell>
-                                <TableCell className="max-w-[50px]">{item.subnetInfo.region}</TableCell>
-                                <TableCell className="max-w-[50px]">{item.subnetInfo.province}</TableCell>
-                                <TableCell className="max-w-[100px]">{item.subnetInfo.isp}</TableCell>
-                                <TableCell className="max-w-[50px]">
+                                <TableCell className="max-w-[30px]">{item.subnetInfo.country}</TableCell>
+                                <TableCell className="max-w-[30px]">{item.subnetInfo.region}</TableCell>
+                                <TableCell className="max-w-[30px]">{item.subnetInfo.province}</TableCell>
+                                <TableCell className="max-w-[30px]">{item.subnetInfo.isp}</TableCell>
+                                <TableCell className="max-w-[30px]">
                                   <Badge variant={item.result.parsed.status === 'NOERROR' ? "default" : "secondary"}>
                                     {item.result.parsed.status}
                                   </Badge>
+                                </TableCell>
+                                <TableCell className="max-w-[100px]">
+                                  <div className="text-xs font-mono break-all">
+                                    {item.result.parsed.lastCname || '-'}
+                                  </div>
                                 </TableCell>
                                 <TableCell className="max-w-60">
                                   <div className="bg-muted rounded p-2 max-h-40 overflow-x-auto overflow-y-auto">
@@ -400,7 +650,7 @@ export default function Home() {
                                 </TableCell>
                               </TableRow>
                             ))}
-                            {multiResult.failedResults.map((item, index) => (
+                            {filteredResults.failedResults.map((item, index) => (
                               <TableRow key={`failed-${index}`}>
                                 <TableCell>{item.subnetInfo.country}</TableCell>
                                 <TableCell>{item.subnetInfo.region}</TableCell>
@@ -409,6 +659,7 @@ export default function Home() {
                                 <TableCell>
                                   <Badge variant="destructive">ERROR</Badge>
                                 </TableCell>
+                                <TableCell>-</TableCell>
                                 <TableCell>
                                   <div className="text-destructive text-xs">
                                     ERROR: {item.error}
@@ -418,6 +669,11 @@ export default function Home() {
                             ))}
                           </TableBody>
                         </Table>
+                        {filteredResults.successfulResults.length === 0 && filteredResults.failedResults.length === 0 && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            没有符合筛选条件的结果
+                          </div>
+                        )}
                       </div>
                     </div>
                   </TabsContent>

@@ -34,6 +34,7 @@ export interface DigParsedResult {
   authority?: DigAnswer[];
   additional?: DigAnswer[];
   rawOutput?: string;
+  lastCname?: string; // 最后一跳cname
 }
 
 export interface DigResult {
