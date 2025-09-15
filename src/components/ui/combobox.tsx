@@ -65,7 +65,7 @@ export function Combobox({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={cn("justify-between", className)}
+          className={cn("justify-between cursor-pointer", className)}
         >
           {selectedOption ? selectedOption.label : placeholder}
           <ChevronsUpDown className="opacity-50" />

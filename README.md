@@ -10,6 +10,7 @@
 - 📊 详细的查询结果展示
 - 🚀 RESTful API 接口
 - ⚙️ 灵活的 dig 工具路径配置
+- 🌍 支持多子网查询，覆盖全球主要地区
 
 ## 环境要求
 
@@ -44,63 +45,94 @@ sudo yum install bind-utils
 brew install bind
 ```
 
-## 配置
+## 快速开始
+
+### 1. 克隆项目
+```bash
+git clone <repository-url>
+cd open-dig
+```
+
+### 2. 安装依赖
+```bash
+npm install
+```
+
+### 3. 配置环境变量
+复制 `.env.example` 文件为 `.env.local` 并配置：
+
+```bash
+cp .env.example .env.local
+```
+
+编辑 `.env.local` 文件，设置您的 dig 工具路径：
+
+```bash
+# Windows 示例
+BIND_PATH=D:\bind9\bin\dig.exe
+
+# Linux 示例  
+BIND_PATH=/usr/bin/dig
+
+# macOS 示例
+BIND_PATH=/usr/local/bin/dig
+```
+
+### 4. 启动应用
+```bash
+# 开发模式
+npm run dev
+
+# 生产模式
+npm run build
+npm start
+```
+
+启动后访问 [http://localhost:3000](http://localhost:3000)
+
+## 配置说明
 
 ### 环境变量配置
 
-创建 `.env.local` 文件并配置 dig 工具路径：
+创建 `.env.local` 文件并配置以下变量：
 
+| 变量名 | 必需 | 说明 | 示例 |
+|--------|------|------|------|
+| `BIND_PATH` | 是 | dig工具的完整路径 | `D:\bind9\bin\dig.exe` |
+| `DEFAULT_DNS` | 否 | 默认DNS服务器 | `223.5.5.5` |
+| `DEBUG` | 否 | 调试模式 | `true` |
+
+#### Windows 路径配置
+
+**推荐路径格式：**
 ```bash
-# dig工具的完整路径
-# Windows示例:
-BIND_PATH=C:\Program Files\ISC BIND 9\bin\dig.exe
-# 或者（如果路径包含空格）:
+# 使用完整绝对路径
 BIND_PATH=D:\bind9\bin\dig.exe
 
-# Linux示例:
-BIND_PATH=/usr/bin/dig
-
-# macOS示例:
-BIND_PATH=/usr/local/bin/dig
-
-# 如果dig在系统PATH中，可以简单设置为:
-BIND_PATH=dig
-
-# 调试模式（可选）
-DEBUG=true
+# 如果路径包含空格，使用引号
+BIND_PATH="C:\Program Files\ISC BIND 9\bin\dig.exe"
 ```
 
-#### dig 版本兼容性
+**常见安装位置：**
+- BIND 9 官方安装：`C:\Program Files\ISC BIND 9\bin\dig.exe`
+- 手动安装：`D:\bind9\bin\dig.exe`
+- Chocolatey 安装：`C:\ProgramData\chocolatey\bin\dig.exe`
 
-本程序支持新旧两种版本的 dig 工具：
+#### Linux/macOS 路径配置
 
-**新版本 (支持 +json)**
-- 自动使用 JSON 格式输出，解析更准确
-- BIND 9.16+ 版本支持
+```bash
+# 系统默认位置
+BIND_PATH=/usr/bin/dig
 
-**老版本 (不支持 +json)**
-- 自动回退到文本格式输出
-- 使用内置解析器处理传统格式
-- 支持所有版本的 dig 工具
+# Homebrew 安装 (macOS)
+BIND_PATH=/usr/local/bin/dig
 
-#### Windows 特别说明
+# 如果 dig 在 PATH 中
+BIND_PATH=dig
+```
 
-1. **路径格式**: 使用完整的绝对路径，包含 `.exe` 扩展名
-2. **路径验证**: 确保文件确实存在于指定路径
-3. **权限检查**: 确保应用程序有权限执行该文件
-4. **调试信息**: 访问状态页面查看详细的错误信息
 
-常见的 Windows dig 工具位置：
-- BIND 9 安装后通常在: `C:\Program Files\ISC BIND 9\bin\dig.exe`
-- 手动下载的版本: `C:\Users\用户名\Downloads\bin\dig.exe`
-
-#### 故障排除
-
-如果遇到 "Invalid option: +json" 错误：
-- 这是正常现象，程序会自动切换到兼容模式
-- 老版本 dig 工具不支持 JSON 输出，但仍能正常工作
-
-#### 调试模式
+### 调试模式
 
 启用调试模式以获取详细的执行信息：
 
@@ -110,34 +142,6 @@ DEBUG=true
    - 执行的 dig 命令
    - 解析结果详情
    - 错误诊断信息
-
-**启动时输出（始终显示）：**
-- 系统平台信息
-- dig 工具路径
-- 调试模式状态
-
-**调试模式输出（仅 DEBUG=true 时）：**
-- 每次查询的具体命令
-- dig 输出解析结果
-- 版本切换过程
-
-## 安装和运行
-
-```bash
-# 安装依赖
-npm install
-
-# 开发模式运行
-npm run dev
-
-# 生产环境构建
-npm run build
-
-# 生产环境运行
-npm start
-```
-
-启动后访问 [http://localhost:3000](http://localhost:3000)
 
 ## API 接口
 
@@ -150,7 +154,7 @@ npm start
 {
   "domain": "example.com",
   "recordType": "A",        // 可选，默认为 "A"
-  "dnsServer": "8.8.8.8"    // 可选
+  "subnet": "1.2.3.0/24"   // 可选，指定子网
 }
 ```
 
@@ -159,18 +163,30 @@ npm start
 {
   "success": true,
   "data": {
-    "command": "dig +json example.com A",
-    "output": "...",
-    "parsed": {
-      "status": "SUCCESS",
-      "answer": [...],
-      "statistics": {
-        "queryTime": "2 msec",
-        "server": "192.168.1.1#53",
-        "when": "Sun Sep 14 12:00:00 UTC 2025",
-        "msgSize": "62"
+    "successfulResults": [
+      {
+        "subnetInfo": {
+          "country": "中国",
+          "region": "华东",
+          "province": "上海",
+          "isp": "电信",
+          "subnet": "1.2.3.0/24"
+        },
+        "result": {
+          "output": ";; dig example.com A +subnet=1.2.3.0/24 @223.5.5.5\n...",
+          "parsed": {
+            "status": "SUCCESS",
+            "answer": [...],
+            "header": {...}
+          }
+        },
+        "success": true
       }
-    }
+    ],
+    "failedResults": [],
+    "totalQueries": 1,
+    "successCount": 1,
+    "failureCount": 0
   }
 }
 ```
@@ -178,8 +194,29 @@ npm start
 **响应（失败）:**
 ```json
 {
-  "code": "DomainRequired",
-  "message": "Domain parameter is required"
+  "code": "InvalidParameters",
+  "message": "参数验证失败",
+  "errors": ["Domain parameter is required"]
+}
+```
+
+### GET /api/status
+
+获取系统状态和 dig 工具信息
+
+**响应:**
+```json
+{
+  "success": true,
+  "data": {
+    "dig": {
+      "available": true,
+      "path": "D:\\bind9\\bin\\dig.exe",
+      "version": "DiG 9.18.12"
+    },
+    "platform": "win32",
+    "debug": false
+  }
 }
 ```
 
@@ -188,16 +225,36 @@ npm start
 ```
 src/
 ├── app/
-│   ├── api/dig/          # API 路由
+│   ├── api/
+│   │   ├── dig/          # DNS查询API
+│   │   └── status/       # 状态检查API
 │   ├── layout.tsx        # 应用布局
 │   └── page.tsx          # 主页面
-└── lib/
-    └── dig-service.ts    # dig 服务逻辑
+├── components/
+│   └── ui/               # UI组件库
+├── lib/
+│   ├── dig-service.ts    # dig服务逻辑
+│   ├── dig-map.ts        # 子网映射配置
+│   ├── validation.ts     # 参数验证
+│   └── utils.ts          # 工具函数
+└── types/
+    └── dig.ts           # 类型定义
 ```
 
 ## 开发
 
+### 可用脚本
+
 ```bash
+# 开发模式运行
+npm run dev
+
+# 生产环境构建
+npm run build
+
+# 生产环境运行
+npm start
+
 # 代码格式化
 npm run format
 
@@ -210,3 +267,43 @@ npm run test
 # 安全检查
 npm run check-security
 ```
+
+### 故障排除
+
+#### 常见问题
+
+1. **"Dig tool not available" 错误**
+   - 检查 `BIND_PATH` 环境变量是否正确
+   - 确认 dig.exe 文件存在且可执行
+   - 在 Windows 上确保路径包含 `.exe` 扩展名
+
+2. **"Invalid option: +json" 错误**
+   - 这是正常现象，程序会自动切换到兼容模式
+   - 老版本 dig 工具不支持 JSON 输出，但仍能正常工作
+
+3. **权限错误**
+   - 确保应用程序有权限执行 dig 工具
+   - 在 Linux/macOS 上检查文件权限
+
+#### 调试步骤
+
+1. 启用调试模式：`DEBUG=true`
+2. 查看控制台输出
+3. 访问 `/api/status` 检查 dig 工具状态
+4. 检查环境变量配置
+
+## 许可证
+
+MIT License
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 更新日志
+
+### v0.1.0
+- 初始版本发布
+- 支持基本 DNS 查询功能
+- 支持多子网查询
+- 提供 Web UI 和 RESTful API
