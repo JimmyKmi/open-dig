@@ -15,7 +15,6 @@ COPY package*.json ./
 # 安装所有依赖（包括开发依赖）用于构建
 RUN npm ci --legacy-peer-deps
 COPY src ./src
-COPY public ./public
 COPY next.config.ts ./
 COPY tsconfig.json ./
 COPY postcss.config.mjs ./
