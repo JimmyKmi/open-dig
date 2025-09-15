@@ -10,10 +10,11 @@ function parseDigTextOutput(output: string): any {
   const lines = output.split('\n');
   const result: any = {
     status: 'SUCCESS',
+    header: {},
     answer: [],
     authority: [],
     additional: [],
-    statistics: {},
+    subnet: null,
   };
 
   let currentSection = 'header';
@@ -23,6 +24,28 @@ function parseDigTextOutput(output: string): any {
 
   for (const line of lines) {
     const trimmedLine = line.trim();
+
+    // 解析header信息 (;; id: 49969(0xc331), opcode: QUERY, flags: QR RD RA)
+    if (trimmedLine.includes('id:') && trimmedLine.includes('opcode:')) {
+      const idMatch = trimmedLine.match(/id:\s*(\d+)/);
+      const opcodeMatch = trimmedLine.match(/opcode:\s*(\w+)/);
+      const flagsMatch = trimmedLine.match(/flags:\s*(.+)/);
+      
+      if (idMatch) result.header.id = parseInt(idMatch[1]);
+      if (opcodeMatch) result.header.opcode = opcodeMatch[1];
+      if (flagsMatch) result.header.flags = flagsMatch[1].trim();
+    }
+
+    // 解析ECS subnet信息 (;; response subnet: ECS 101.249.112.0/24 scope/24)
+    if (trimmedLine.includes('response subnet:') || trimmedLine.includes('subnet:')) {
+      const subnetMatch = trimmedLine.match(/ECS\s+([\d.]+\/\d+)\s+scope\/(\d+)/);
+      if (subnetMatch) {
+        result.subnet = {
+          subnet: subnetMatch[1],
+          scope: parseInt(subnetMatch[2]),
+        };
+      }
+    }
 
     // 解析状态
     if (trimmedLine.includes('status:')) {
@@ -92,34 +115,6 @@ function parseDigTextOutput(output: string): any {
       }
     }
 
-    // 解析统计信息
-    if (trimmedLine.includes('Query time:')) {
-      const queryTimeMatch = trimmedLine.match(/Query time:\s*(.+)/);
-      if (queryTimeMatch) {
-        result.statistics.queryTime = queryTimeMatch[1];
-      }
-    }
-
-    if (trimmedLine.includes('SERVER:')) {
-      const serverMatch = trimmedLine.match(/SERVER:\s*(.+)/);
-      if (serverMatch) {
-        result.statistics.server = serverMatch[1];
-      }
-    }
-
-    if (trimmedLine.includes('WHEN:')) {
-      const whenMatch = trimmedLine.match(/WHEN:\s*(.+)/);
-      if (whenMatch) {
-        result.statistics.when = whenMatch[1];
-      }
-    }
-
-    if (trimmedLine.includes('MSG SIZE')) {
-      const msgSizeMatch = trimmedLine.match(/MSG SIZE.*:\s*(.+)/);
-      if (msgSizeMatch) {
-        result.statistics.msgSize = msgSizeMatch[1];
-      }
-    }
   }
 
   // 如果没有找到答案，但状态是成功的，可能是NXDOMAIN等情况
@@ -134,8 +129,76 @@ function parseDigTextOutput(output: string): any {
   return result;
 }
 
+// 格式化解析后的dig结果为标准输出格式
+function formatDigOutput(parsed: any, originalQuery?: string): string {
+  let output = '';
+  
+  // 添加查询命令注释行
+  if (originalQuery) {
+    output += `; ${originalQuery}\n`;
+  }
+  
+  // 添加header信息
+  if (parsed.header && (parsed.header.id !== undefined || parsed.header.opcode || parsed.header.flags)) {
+    output += `;; id: ${parsed.header.id || 0}`;
+    if (parsed.header.id) {
+      output += `(0x${parsed.header.id.toString(16)})`;
+    }
+    if (parsed.header.opcode) {
+      output += `, opcode: ${parsed.header.opcode}`;
+    }
+    if (parsed.header.flags) {
+      output += `, flags: ${parsed.header.flags}`;
+    }
+    output += '\n';
+  }
+  
+  // 添加subnet信息
+  if (parsed.subnet) {
+    output += `;; response subnet: ECS ${parsed.subnet.subnet} scope/${parsed.subnet.scope}\n`;
+  }
+  
+  output += '\n';
+  
+  // 添加ANSWER SECTION
+  if (parsed.answer && parsed.answer.length > 0) {
+    output += `;; ANSWER SECTION:\n`;
+    for (const record of parsed.answer) {
+      output += `${record.name} ${record.ttl} ${record.class} ${record.type} ${record.rdata}\n`;
+    }
+    output += '\n';
+  }
+  
+  // 添加AUTHORITY SECTION
+  if (parsed.authority && parsed.authority.length > 0) {
+    output += `;; AUTHORITY SECTION:\n`;
+    for (const record of parsed.authority) {
+      output += `${record.name} ${record.ttl} ${record.class} ${record.type} ${record.rdata}\n`;
+    }
+    output += '\n';
+  }
+  
+  // 添加ADDITIONAL SECTION
+  if (parsed.additional && parsed.additional.length > 0) {
+    output += `;; ADDITIONAL SECTION:\n`;
+    for (const record of parsed.additional) {
+      output += `${record.name} ${record.ttl} ${record.class} ${record.type} ${record.rdata}\n`;
+    }
+    output += '\n';
+  }
+  
+  // 移除统计信息输出部分
+  
+  return output.trim();
+}
+
+// 获取默认DNS服务器
+export function getDefaultDnsServer(): string {
+  return process.env.DEFAULT_DNS || '223.5.5.5';
+}
+
 export async function execDigCommand(options: DigOptions): Promise<DigResult> {
-  const {domain, recordType = 'A', dnsServer = '223.5.5.5'} = options;
+  const {domain, recordType = 'A', dnsServer = getDefaultDnsServer(), subnet} = options;
 
   // 启动时输出系统信息
   logStartupInfo();
@@ -148,7 +211,11 @@ export async function execDigCommand(options: DigOptions): Promise<DigResult> {
     ? `"${digPath}"` : digPath;
 
   // 构建dig命令
-  const command = `${quotedDigPath} ${domain} ${recordType} @${dnsServer}`;
+  let command = `${quotedDigPath} ${domain} ${recordType}`;
+  if (subnet) {
+    command += ` +subnet=${subnet}`;
+  }
+  command += ` @${dnsServer}`;
 
   // 记录执行的命令（调试模式）
   logDebug(`执行命令: ${command}`);
@@ -163,9 +230,18 @@ export async function execDigCommand(options: DigOptions): Promise<DigResult> {
     const parsed = parseDigTextOutput(stdout);
     logDebug('解析结果:', parsed);
 
+    // 构建原始查询字符串用于格式化输出
+    let originalQuery = `dig ${domain} ${recordType}`;
+    if (subnet) {
+      originalQuery += ` +subnet=${subnet}`;
+    }
+    originalQuery += ` @${dnsServer}`;
+    
+    // 使用解析后的数据重新格式化输出
+    const formattedOutput = formatDigOutput(parsed, originalQuery);
+
     return {
-      command,
-      output: stdout,
+      output: formattedOutput,
       parsed,
     };
   } catch (error: any) {

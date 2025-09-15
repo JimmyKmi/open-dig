@@ -2,6 +2,7 @@ export interface DigOptions {
   domain: string;
   recordType?: string;
   dnsServer?: string;
+  subnet?: string;
 }
 
 export interface DigAnswer {
@@ -13,24 +14,30 @@ export interface DigAnswer {
   rdata: string;
 }
 
-export interface DigStatistics {
-  queryTime: string;
-  server: string;
-  when: string;
-  msgSize: string;
+// 移除statistics相关类型定义
+
+export interface DigHeader {
+  id?: number;
+  opcode?: string;
+  flags?: string;
+}
+
+export interface DigSubnet {
+  subnet: string;
+  scope: number;
 }
 
 export interface DigParsedResult {
   status: string;
+  header?: DigHeader;
+  subnet?: DigSubnet;
   answer?: DigAnswer[];
   authority?: DigAnswer[];
   additional?: DigAnswer[];
-  statistics?: DigStatistics;
   rawOutput?: string;
 }
 
 export interface DigResult {
-  command: string;
   output: string;
   parsed: DigParsedResult;
 }

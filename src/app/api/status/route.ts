@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDigInfo } from '@/lib/dig-service';
+import { getDigInfo, getDefaultDnsServer } from '@/lib/dig-service';
 
 export async function GET() {
   try {
@@ -14,6 +14,7 @@ export async function GET() {
         error: digInfo.error,
         status: digInfo.available ? 'ready' : 'dig tool not found',
         platform: process.platform,
+        defaultDnsServer: getDefaultDnsServer(),
       },
     });
   } catch (error: any) {

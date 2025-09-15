@@ -12,6 +12,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [systemStatus, setSystemStatus] = useState<{
     digAvailable: boolean;
+    defaultDnsServer?: string;
   } | null>(null);
 
   const recordTypes = ['A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'SOA', 'PTR', 'SRV'];
@@ -23,7 +24,10 @@ export default function Home() {
         const response = await fetch('/api/status');
         const data = await response.json();
         if (data.success) {
-          setSystemStatus({ digAvailable: data.data.digAvailable });
+          setSystemStatus({ 
+            digAvailable: data.data.digAvailable,
+            defaultDnsServer: data.data.defaultDnsServer
+          });
         }
       } catch (err) {
         console.error('Failed to check system status:', err);
@@ -67,19 +71,15 @@ export default function Home() {
     }
   };
 
-  const formatJsonOutput = (obj: any) => {
-    return JSON.stringify(obj, null, 2);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
         <header className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">OpenDig</h1>
-          <p className="text-gray-600">基于dig工具的DNS查询Web界面</p>
+          <p className="text-gray-600">本工具可探测各个地区运营商的 DNS 解析情况</p>
           
           {systemStatus && (
-            <div className="mt-4">
+            <div className="mt-4 space-y-2">
               <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
                 systemStatus.digAvailable 
                   ? 'bg-green-100 text-green-800' 
@@ -88,8 +88,13 @@ export default function Home() {
                 <div className={`w-2 h-2 rounded-full mr-2 ${
                   systemStatus.digAvailable ? 'bg-green-500' : 'bg-red-500'
                 }`}></div>
-                {systemStatus.digAvailable ? 'dig工具已就绪' : 'dig工具未找到'}
+                {systemStatus.digAvailable ? '已就绪' : 'DIG工具路径设置错误，未找到工具'}
               </div>
+              {systemStatus.defaultDnsServer && (
+                <div className="text-xs text-gray-600">
+                  默认DNS服务器: {systemStatus.defaultDnsServer}
+                </div>
+              )}
             </div>
           )}
         </header>
@@ -132,14 +137,14 @@ export default function Home() {
 
               <div>
                 <label htmlFor="dnsServer" className="block text-sm font-medium text-gray-700 mb-1">
-                  DNS服务器（可选）
+                  DNS服务器
                 </label>
                 <input
                   type="text"
                   id="dnsServer"
                   value={dnsServer}
                   onChange={(e) => setDnsServer(e.target.value)}
-                  placeholder="例如: 8.8.8.8"
+                  placeholder={systemStatus?.defaultDnsServer}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -253,31 +258,6 @@ export default function Home() {
                   </div>
                 )}
 
-                {result.parsed.statistics && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">查询统计</h3>
-                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium text-blue-800">查询时间:</span>
-                          <div className="text-blue-700">{result.parsed.statistics.queryTime}</div>
-                        </div>
-                        <div>
-                          <span className="font-medium text-blue-800">服务器:</span>
-                          <div className="text-blue-700">{result.parsed.statistics.server}</div>
-                        </div>
-                        <div>
-                          <span className="font-medium text-blue-800">查询时间:</span>
-                          <div className="text-blue-700">{result.parsed.statistics.when}</div>
-                        </div>
-                        <div>
-                          <span className="font-medium text-blue-800">消息大小:</span>
-                          <div className="text-blue-700">{result.parsed.statistics.msgSize}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <div>
                   <h3 className="text-sm font-medium text-gray-700 mb-2">完整输出</h3>

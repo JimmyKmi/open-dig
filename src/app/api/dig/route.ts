@@ -5,7 +5,7 @@ import { logError } from '@/lib/log';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { domain, recordType = 'A', dnsServer } = body;
+    const { domain, recordType = 'A', dnsServer, subnet } = body;
 
     if (!domain) {
       return NextResponse.json(
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       domain,
       recordType,
       dnsServer,
+      subnet,
     });
 
     return NextResponse.json({

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OpenDig - DNS查询工具",
-  description: "基于dig工具的DNS查询Web界面",
+  title: "OpenDig",
+  description: "本工具可探测各个地区运营商的 DNS 解析情况",
 };
 
 export default function RootLayout({
