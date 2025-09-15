@@ -17,7 +17,6 @@ RUN npm ci --legacy-peer-deps
 COPY src ./src
 COPY public ./public
 COPY next.config.ts ./
-COPY next-env.d.ts ./
 COPY tsconfig.json ./
 COPY postcss.config.mjs ./
 COPY components.json ./
