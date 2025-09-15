@@ -17,7 +17,7 @@ export async function GET() {
         platform: process.platform,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError('Status check failed:', {
       error: error.message,
       stack: error.stack

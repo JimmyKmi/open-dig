@@ -10,7 +10,7 @@ import {Alert, AlertDescription, AlertTitle} from '@/components/ui/alert';
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui/table';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import {AlertCircle, CheckCircle2, Search, X} from 'lucide-react';
-import {QueryResultSkeleton, MultiQueryResultSkeleton} from '@/components/ui/query-skeleton';
+import {MultiQueryResultSkeleton} from '@/components/ui/query-skeleton';
 import {Footer} from '@/components/ui/footer';
 import {validateDomain} from '@/lib/utils';
 
@@ -56,11 +56,11 @@ export default function Home() {
 
   // 聚合解析结果，以IP为key去重
   const aggregateResults = (results: SubnetQueryResult[]) => {
-    const ipMap = new Map<string, any>();
+    const ipMap = new Map<string, { ip: string; type: string; ttl: number; name: string; sources: Array<{ country: string; region: string; province: string; isp: string; subnet: string }> }>();
 
     results.forEach(({result, subnetInfo}) => {
       if (result.parsed.answer) {
-        result.parsed.answer.forEach((record: any) => {
+        result.parsed.answer.forEach((record: { type: string; rdata: string; ttl: number; name: string }) => {
           if (record.type === 'A' || record.type === 'AAAA') {
             const ip = record.rdata;
             if (!ipMap.has(ip)) {
@@ -92,7 +92,7 @@ export default function Home() {
     const ipSet = new Set<string>();
     results.forEach(({result}) => {
       if (result.parsed.answer) {
-        result.parsed.answer.forEach((record: any) => {
+        result.parsed.answer.forEach((record: { type: string; rdata: string }) => {
           if (record.type === 'A' || record.type === 'AAAA') {
             ipSet.add(record.rdata);
           }
@@ -172,7 +172,7 @@ export default function Home() {
 
       // IP搜索（在成功结果中搜索解析出的IP）
       if (ipSearch && 'result' in item) {
-        const hasMatchingIP = item.result.parsed.answer?.some((record: any) =>
+        const hasMatchingIP = item.result.parsed.answer?.some((record: { rdata: string }) =>
           record.rdata.toLowerCase().includes(ipSearch.toLowerCase())
         );
         if (!hasMatchingIP) return false;
@@ -269,8 +269,8 @@ export default function Home() {
       } else {
         setResult(data.data as DigResult);
       }
-    } catch (err: any) {
-      setError(err.message || 'DNS查询失败');
+    } catch (err: unknown) {
+      setError((err as Error).message || 'DNS查询失败');
     } finally {
       setLoading(false);
     }
@@ -292,7 +292,7 @@ export default function Home() {
                 ) : (
                   <AlertCircle className="h-3 w-3"/>
                 )}
-                'DIG工具路径设置错误，未找到工具'
+                &apos;DIG工具路径设置错误，未找到工具&apos;
               </Badge>
             </div>
           )}
@@ -387,7 +387,7 @@ export default function Home() {
                       <div className="border rounded-lg bg-background">
                         <div className="p-3">
                           <div className="space-y-2">
-                            {result.parsed.answer.map((record: any, index: number) => (
+                            {result.parsed.answer.map((record: { name: string; type: string; ttl: number; rdata: string }, index: number) => (
                               <div key={index} className="bg-muted rounded p-2 text-sm">
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                   <div>
@@ -431,7 +431,7 @@ export default function Home() {
                       <div className="border rounded-lg bg-background">
                         <div className="p-3">
                           <div className="space-y-2">
-                            {result.parsed.authority.map((record: any, index: number) => (
+                            {result.parsed.authority.map((record: { name: string; type: string; ttl: number; rdata: string }, index: number) => (
                               <div key={index} className="bg-muted rounded p-2 text-sm">
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                   <div>
@@ -526,7 +526,7 @@ export default function Home() {
                       <div className="border rounded-lg bg-background">
                         <div className="p-3 bg-zinc-500/10">
                           <div className="space-y-3">
-                            {aggregateResults(filteredResults.successfulResults).map((ipResult: any, index: number) => (
+                            {aggregateResults(filteredResults.successfulResults).map((ipResult: { ip: string; type: string; ttl: number; sources: Array<{ country: string; province: string; isp: string }> }, index: number) => (
                               <div key={index} className="bg-white dark:bg-black rounded py-1 px-3 text-sm">
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-2">
                                   <div className="max-w-[200px] flex flex-col gap-1">
@@ -546,7 +546,7 @@ export default function Home() {
                                   <div className="col-span-3 flex flex-col">
                                     <span className="font-medium">{ipResult.sources.length} 个来源:</span>
                                     <div className="mt-1 flex flex-wrap gap-1">
-                                      {ipResult.sources.map((source: any, sourceIndex: number) => (
+                                      {ipResult.sources.map((source: { country: string; province: string; isp: string }, sourceIndex: number) => (
                                         <Badge key={sourceIndex} variant="secondary" className="text-xs">
                                           {source.country} {source.province} {source.isp}
                                         </Badge>

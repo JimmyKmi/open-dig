@@ -169,7 +169,7 @@ export function validateRecordType(recordType: string): {
   const trimmedType = recordType.trim().toUpperCase();
 
   // 检查是否在合法列表中
-  if (!VALID_RECORD_TYPES.includes(trimmedType as any)) {
+  if (!VALID_RECORD_TYPES.includes(trimmedType as typeof VALID_RECORD_TYPES[number])) {
     return {
       isValid: false,
       error: `不支持的记录类型: ${recordType}。支持的类型: ${VALID_RECORD_TYPES.join(', ')}`
@@ -241,7 +241,7 @@ export function validateSubnet(subnet: string): {
   // 检查IPv6 CIDR格式
   const ipv6CidrPattern = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\/\d{1,3}$/;
   if (ipv6CidrPattern.test(trimmedSubnet)) {
-    const [ip, prefix] = trimmedSubnet.split('/');
+    const [, prefix] = trimmedSubnet.split('/');
     const prefixLength = parseInt(prefix);
     
     if (prefixLength < 0 || prefixLength > 128) {

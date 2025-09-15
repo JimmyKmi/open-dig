@@ -5,7 +5,7 @@ import { subnetMap, SubnetInfo } from '@/lib/dig-map';
 import { validateApiParams } from '@/lib/validation';
 
 export async function POST(request: NextRequest) {
-  let requestBody: any = {};
+  let requestBody: { domain?: string; recordType?: string; subnet?: string } = {};
   try {
     const body = await request.json();
     const { domain, recordType = 'A', subnet } = body;
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
             result,
             success: true,
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           logError('Subnet query failed:', {
             subnet: subnetInfo.subnet,
             domain,
@@ -71,11 +71,11 @@ export async function POST(request: NextRequest) {
 
     // 处理结果
     const successfulResults = results
-      .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && r.value.success)
+      .filter((r): r is PromiseFulfilledResult<{ subnetInfo: { country: string; region: string; province: string; isp: string; subnet: string }; result?: DigResult; error?: string; success: boolean }> => r.status === 'fulfilled' && r.value.success)
       .map(r => r.value);
 
     const failedResults = results
-      .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && !r.value.success)
+      .filter((r): r is PromiseFulfilledResult<{ subnetInfo: { country: string; region: string; province: string; isp: string; subnet: string }; result?: DigResult; error?: string; success: boolean }> => r.status === 'fulfilled' && !r.value.success)
       .map(r => r.value);
 
     return NextResponse.json({
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         failureCount: failedResults.length,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError('API request failed:', {
       body: requestBody,
       error: error.message,

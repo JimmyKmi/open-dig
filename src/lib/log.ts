@@ -3,21 +3,21 @@
 // 日志辅助函数
 export const isDebugMode = (): boolean => process.env.DEBUG === 'true';
 
-export const logInfo = (message: string, ...args: any[]): void => {
+export const logInfo = (message: string, ...args: unknown[]): void => {
   console.log(`[INFO] ${message}`, ...args);
 };
 
-export const logDebug = (message: string, ...args: any[]): void => {
+export const logDebug = (message: string, ...args: unknown[]): void => {
   if (isDebugMode()) {
     console.log(`[DEBUG] ${message}`, ...args);
   }
 };
 
-export const logError = (message: string, ...args: any[]): void => {
+export const logError = (message: string, ...args: unknown[]): void => {
   console.error(`[ERROR] ${message}`, ...args);
 };
 
-export const logWarn = (message: string, ...args: any[]): void => {
+export const logWarn = (message: string, ...args: unknown[]): void => {
   console.warn(`[WARN] ${message}`, ...args);
 };
 

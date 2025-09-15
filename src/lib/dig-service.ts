@@ -1,14 +1,30 @@
 import {exec} from 'child_process';
 import {promisify} from 'util';
 import {DigOptions, DigResult} from '@/types/dig';
-import {logInfo, logDebug, logStartupInfo, logError} from '@/lib/log';
+import {logDebug, logStartupInfo, logError} from '@/lib/log';
 
 const execAsync = promisify(exec);
 
 // 解析传统 dig 文本输出
-function parseDigTextOutput(output: string): any {
+function parseDigTextOutput(output: string): {
+  status: string;
+  header: Record<string, unknown>;
+  answer: Array<{ name: string; ttl: number; class: string; type: string; rdata: string }>;
+  authority: Array<{ name: string; ttl: number; class: string; type: string; rdata: string }>;
+  additional: Array<{ name: string; ttl: number; class: string; type: string; rdata: string }>;
+  subnet: { subnet: string; scope: number } | null;
+  lastCname: string | null;
+} {
   const lines = output.split('\n');
-  const result: any = {
+  const result: {
+    status: string;
+    header: Record<string, unknown>;
+    answer: Array<{ name: string; ttl: number; class: string; type: string; rdata: string }>;
+    authority: Array<{ name: string; ttl: number; class: string; type: string; rdata: string }>;
+    additional: Array<{ name: string; ttl: number; class: string; type: string; rdata: string }>;
+    subnet: { subnet: string; scope: number } | null;
+    lastCname: string | null;
+  } = {
     status: 'SUCCESS',
     header: {},
     answer: [],
@@ -136,7 +152,15 @@ function parseDigTextOutput(output: string): any {
 }
 
 // 格式化解析后的dig结果为标准输出格式
-function formatDigOutput(parsed: any, originalQuery?: string): string {
+function formatDigOutput(parsed: {
+  status: string;
+  header?: { id?: number; opcode?: string; flags?: string };
+  subnet?: { subnet: string; scope: number };
+  answer?: Array<{ name: string; ttl: number; class: string; type: string; rdata: string }>;
+  authority?: Array<{ name: string; ttl: number; class: string; type: string; rdata: string }>;
+  additional?: Array<{ name: string; ttl: number; class: string; type: string; rdata: string }>;
+  lastCname?: string;
+}, originalQuery?: string): string {
   let output = '';
   
   // 添加查询命令注释行
@@ -228,12 +252,7 @@ export async function execDigCommand(options: DigOptions): Promise<DigResult> {
   logDebug(`run: ${command}`);
 
   try {
-    const {stdout, stderr} = await execAsync(command);
-
-    if (stderr && !stderr.includes('WARNING')) {
-      logError('Dig command stderr:', stderr);
-      throw new Error('Dig command execution failed');
-    }
+    const {stdout} = await execAsync(command);
 
     const parsed = parseDigTextOutput(stdout);
     logDebug('解析结果:', parsed);
@@ -252,14 +271,14 @@ export async function execDigCommand(options: DigOptions): Promise<DigResult> {
       output: formattedOutput,
       parsed,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError('Dig command execution failed:', {
       command,
       domain,
       recordType,
       subnet,
-      error: error.message,
-      stack: error.stack
+      error: (error as Error).message,
+      stack: (error as Error).stack
     });
     throw new Error('Failed to execute dig command');
   }
@@ -280,18 +299,18 @@ export async function getDigInfo(): Promise<{
       ? `"${digPath}"`
       : digPath;
 
-    const {stdout, stderr} = await execAsync(`${quotedDigPath} -v`);
+    const {stdout} = await execAsync(`${quotedDigPath} -v`);
 
     return {
       available: true,
       path: digPath,
       version: stdout.trim(),
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError('Dig tool check failed:', {
       path: process.env.BIND_PATH || 'dig',
-      error: error.message,
-      stack: error.stack
+      error: (error as Error).message,
+      stack: (error as Error).stack
     });
     return {
       available: false,
