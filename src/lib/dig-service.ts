@@ -1,7 +1,7 @@
 import {exec} from 'child_process';
 import {promisify} from 'util';
 import {DigOptions, DigResult} from '@/types/dig';
-import {logInfo, logDebug, logStartupInfo} from '@/lib/log';
+import {logInfo, logDebug, logStartupInfo, logError} from '@/lib/log';
 
 const execAsync = promisify(exec);
 
@@ -198,7 +198,8 @@ export function getDefaultDnsServer(): string {
 }
 
 export async function execDigCommand(options: DigOptions): Promise<DigResult> {
-  const {domain, recordType = 'A', dnsServer = getDefaultDnsServer(), subnet} = options;
+  const {domain, recordType = 'A', subnet} = options;
+  const dnsServer = getDefaultDnsServer();
 
   // 启动时输出系统信息
   logStartupInfo();
@@ -211,11 +212,12 @@ export async function execDigCommand(options: DigOptions): Promise<DigResult> {
     ? `"${digPath}"` : digPath;
 
   // 构建dig命令
-  let command = `${quotedDigPath} ${domain} ${recordType}`;
+  let command = `${quotedDigPath} ${domain} ${recordType} +timeout=3`;
   if (subnet) {
     command += ` +subnet=${subnet}`;
   }
   command += ` @${dnsServer}`;
+  console.log('execDigCommand', command);
 
   // 记录执行的命令（调试模式）
   logDebug(`执行命令: ${command}`);
@@ -224,7 +226,8 @@ export async function execDigCommand(options: DigOptions): Promise<DigResult> {
     const {stdout, stderr} = await execAsync(command);
 
     if (stderr && !stderr.includes('WARNING')) {
-      throw new Error(`Dig command error: ${stderr}`);
+      logError('Dig command stderr:', stderr);
+      throw new Error('Dig command execution failed');
     }
 
     const parsed = parseDigTextOutput(stdout);
@@ -245,7 +248,15 @@ export async function execDigCommand(options: DigOptions): Promise<DigResult> {
       parsed,
     };
   } catch (error: any) {
-    throw new Error(`Failed to execute dig command: ${error.message}`);
+    logError('Dig command execution failed:', {
+      command,
+      domain,
+      recordType,
+      subnet,
+      error: error.message,
+      stack: error.stack
+    });
+    throw new Error('Failed to execute dig command');
   }
 }
 
@@ -272,10 +283,15 @@ export async function getDigInfo(): Promise<{
       version: stdout.trim(),
     };
   } catch (error: any) {
+    logError('Dig tool check failed:', {
+      path: process.env.BIND_PATH || 'dig',
+      error: error.message,
+      stack: error.stack
+    });
     return {
       available: false,
       path: process.env.BIND_PATH || 'dig',
-      error: error.message,
+      error: 'Dig tool not available',
     };
   }
 }

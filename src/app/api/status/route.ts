@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getDigInfo, getDefaultDnsServer } from '@/lib/dig-service';
+import { getDigInfo } from '@/lib/dig-service';
+import { logError } from '@/lib/log';
 
 export async function GET() {
   try {
@@ -14,14 +15,17 @@ export async function GET() {
         error: digInfo.error,
         status: digInfo.available ? 'ready' : 'dig tool not found',
         platform: process.platform,
-        defaultDnsServer: getDefaultDnsServer(),
       },
     });
   } catch (error: any) {
+    logError('Status check failed:', {
+      error: error.message,
+      stack: error.stack
+    });
     return NextResponse.json(
       {
         code: 'StatusCheckFailed',
-        message: error.message || 'Failed to check system status',
+        message: 'Failed to check system status',
       },
       { status: 500 }
     );

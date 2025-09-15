@@ -1,7 +1,6 @@
 export interface DigOptions {
   domain: string;
   recordType?: string;
-  dnsServer?: string;
   subnet?: string;
 }
 

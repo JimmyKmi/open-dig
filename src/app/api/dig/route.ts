@@ -4,9 +4,11 @@ import { logError } from '@/lib/log';
 import { subnetMap, SubnetInfo } from '@/lib/dig-map';
 
 export async function POST(request: NextRequest) {
+  let requestBody: any = {};
   try {
     const body = await request.json();
-    const { domain, recordType = 'A', dnsServer, subnet } = body;
+    const { domain, recordType = 'A', subnet } = body;
+    requestBody = { domain, recordType, subnet };
 
     if (!domain) {
       return NextResponse.json(
@@ -20,7 +22,6 @@ export async function POST(request: NextRequest) {
       const result = await execDigCommand({
         domain,
         recordType,
-        dnsServer,
         subnet,
       });
 
@@ -37,7 +38,6 @@ export async function POST(request: NextRequest) {
           const result = await execDigCommand({
             domain,
             recordType,
-            dnsServer,
             subnet: subnetInfo.subnet,
           });
           return {
@@ -46,9 +46,16 @@ export async function POST(request: NextRequest) {
             success: true,
           };
         } catch (error: any) {
+          logError('Subnet query failed:', {
+            subnet: subnetInfo.subnet,
+            domain,
+            recordType,
+            error: error.message,
+            stack: error.stack
+          });
           return {
             subnetInfo,
-            error: error.message,
+            error: 'Query failed',
             success: false,
           };
         }
@@ -75,11 +82,15 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    logError('Dig command error:', error);
+    logError('API request failed:', {
+      body: requestBody,
+      error: error.message,
+      stack: error.stack
+    });
     return NextResponse.json(
       { 
         code: 'DigCommandFailed', 
-        message: error.message || 'Failed to execute dig command' 
+        message: 'Failed to execute dig command' 
       },
       { status: 500 }
     );

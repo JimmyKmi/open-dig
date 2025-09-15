@@ -9,19 +9,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function Home() {
   const [domain, setDomain] = useState('');
   const [recordType, setRecordType] = useState('A');
-  const [dnsServer, setDnsServer] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DigResult | null>(null);
   const [multiResult, setMultiResult] = useState<MultiSubnetQueryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [systemStatus, setSystemStatus] = useState<{
     digAvailable: boolean;
-    defaultDnsServer?: string;
   } | null>(null);
 
   const recordTypes = ['A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'SOA', 'PTR', 'SRV'];
@@ -67,8 +66,7 @@ export default function Home() {
         const data = await response.json();
         if (data.success) {
           setSystemStatus({ 
-            digAvailable: data.data.digAvailable,
-            defaultDnsServer: data.data.defaultDnsServer
+            digAvailable: data.data.digAvailable
           });
         }
       } catch (err) {
@@ -96,7 +94,6 @@ export default function Home() {
         body: JSON.stringify({
           domain: domain.trim(),
           recordType,
-          dnsServer: dnsServer.trim() || undefined,
         }),
       });
 
@@ -147,7 +144,7 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label htmlFor="domain" className="text-sm font-medium">
                     域名 *
@@ -178,19 +175,6 @@ export default function Home() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="dnsServer" className="text-sm font-medium">
-                    DNS服务器
-                  </label>
-                  <Input
-                    type="text"
-                    id="dnsServer"
-                    value={dnsServer}
-                    onChange={(e) => setDnsServer(e.target.value)}
-                    placeholder={systemStatus?.defaultDnsServer}
-                  />
                 </div>
               </div>
 
@@ -331,147 +315,156 @@ export default function Home() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                {/* 聚合解析结果 */}
-                {multiResult.successfulResults.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">
+                <Tabs defaultValue="results" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="results">
                       聚合解析结果 ({aggregateResults(multiResult.successfulResults).length} 个IP)
-                    </h3>
+                    </TabsTrigger>
+                    <TabsTrigger value="status">
+                      查询状态详情 ({multiResult.successCount}/{multiResult.totalQueries})
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="results" className="space-y-4">
+                    {multiResult.successfulResults.length > 0 ? (
+                      <Card>
+                        <CardContent className="p-3">
+                          <div className="space-y-3">
+                            {aggregateResults(multiResult.successfulResults).map((ipResult: any, index: number) => (
+                              <div key={index} className="bg-muted rounded p-3 text-sm">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-2">
+                                  <div>
+                                    <span className="font-medium">IP地址:</span>
+                                    <div className="font-mono text-muted-foreground">{ipResult.ip}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">类型:</span>
+                                    <div className="text-muted-foreground">{ipResult.type}</div>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">TTL:</span>
+                                    <div className="text-muted-foreground">{ipResult.ttl}</div>
+                                  </div>
+                                </div>
+                                <div>
+                                  <span className="font-medium">来源地区 ({ipResult.sources.length} 个):</span>
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    {ipResult.sources.map((source: any, sourceIndex: number) => (
+                                      <Badge key={sourceIndex} variant="secondary" className="text-xs">
+                                        {source.country} {source.province} {source.isp}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        暂无解析结果
+                      </div>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="status" className="space-y-4">
                     <Card>
-                      <CardContent className="p-3">
-                        <div className="space-y-3">
-                          {aggregateResults(multiResult.successfulResults).map((ipResult: any, index: number) => (
-                            <div key={index} className="bg-muted rounded p-3 text-sm">
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-2">
-                                <div>
-                                  <span className="font-medium">IP地址:</span>
-                                  <div className="font-mono text-muted-foreground">{ipResult.ip}</div>
-                                </div>
-                                <div>
-                                  <span className="font-medium">类型:</span>
-                                  <div className="text-muted-foreground">{ipResult.type}</div>
-                                </div>
-                                <div>
-                                  <span className="font-medium">TTL:</span>
-                                  <div className="text-muted-foreground">{ipResult.ttl}</div>
-                                </div>
-                              </div>
-                              <div>
-                                <span className="font-medium">来源地区 ({ipResult.sources.length} 个):</span>
-                                <div className="mt-1 flex flex-wrap gap-1">
-                                  {ipResult.sources.map((source: any, sourceIndex: number) => (
-                                    <Badge key={sourceIndex} variant="secondary" className="text-xs">
-                                      {source.country} {source.province} {source.isp}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                      <CardHeader>
+                        <CardTitle>查询状态详情</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>国家</TableHead>
+                              <TableHead>大区</TableHead>
+                              <TableHead>省份</TableHead>
+                              <TableHead>ISP</TableHead>
+                              <TableHead>状态</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {multiResult.successfulResults.map((item, index) => (
+                              <TableRow key={index}>
+                                <TableCell>{item.subnetInfo.country}</TableCell>
+                                <TableCell>{item.subnetInfo.region}</TableCell>
+                                <TableCell>{item.subnetInfo.province}</TableCell>
+                                <TableCell>{item.subnetInfo.isp}</TableCell>
+                                <TableCell>
+                                  <Badge variant="default">成功</Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            {multiResult.failedResults.map((item, index) => (
+                              <TableRow key={`failed-${index}`}>
+                                <TableCell>{item.subnetInfo.country}</TableCell>
+                                <TableCell>{item.subnetInfo.region}</TableCell>
+                                <TableCell>{item.subnetInfo.province}</TableCell>
+                                <TableCell>{item.subnetInfo.isp}</TableCell>
+                                <TableCell>
+                                  <Badge variant="destructive">失败</Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </CardContent>
                     </Card>
-                  </div>
-                )}
-
-                {/* 查询状态表格 */}
-                <div>
-                  <h3 className="text-sm font-medium mb-2">查询状态详情</h3>
-                  <Card>
-                    <CardContent className="p-0">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>国家</TableHead>
-                            <TableHead>大区</TableHead>
-                            <TableHead>省份</TableHead>
-                            <TableHead>ISP</TableHead>
-                            <TableHead>状态</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {multiResult.successfulResults.map((item, index) => (
-                            <TableRow key={index}>
-                              <TableCell>{item.subnetInfo.country}</TableCell>
-                              <TableCell>{item.subnetInfo.region}</TableCell>
-                              <TableCell>{item.subnetInfo.province}</TableCell>
-                              <TableCell>{item.subnetInfo.isp}</TableCell>
-                              <TableCell>
-                                <Badge variant="default">成功</Badge>
-                              </TableCell>
+                    
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>完整输出详情</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>国家</TableHead>
+                              <TableHead>大区</TableHead>
+                              <TableHead>省份</TableHead>
+                              <TableHead>ISP</TableHead>
+                              <TableHead>完整输出</TableHead>
                             </TableRow>
-                          ))}
-                          {multiResult.failedResults.map((item, index) => (
-                            <TableRow key={`failed-${index}`}>
-                              <TableCell>{item.subnetInfo.country}</TableCell>
-                              <TableCell>{item.subnetInfo.region}</TableCell>
-                              <TableCell>{item.subnetInfo.province}</TableCell>
-                              <TableCell>{item.subnetInfo.isp}</TableCell>
-                              <TableCell>
-                                <Badge variant="destructive">失败</Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* 完整输出表格 */}
-                <div>
-                  <h3 className="text-sm font-medium mb-2">完整输出详情</h3>
-                  <Card>
-                    <CardContent className="p-0">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>国家</TableHead>
-                            <TableHead>大区</TableHead>
-                            <TableHead>省份</TableHead>
-                            <TableHead>ISP</TableHead>
-                            <TableHead>完整输出</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {multiResult.successfulResults.map((item, index) => (
-                            <TableRow key={index}>
-                              <TableCell>{item.subnetInfo.country}</TableCell>
-                              <TableCell>{item.subnetInfo.region}</TableCell>
-                              <TableCell>{item.subnetInfo.province}</TableCell>
-                              <TableCell>{item.subnetInfo.isp}</TableCell>
-                              <TableCell>
-                                <details className="cursor-pointer">
-                                  <summary className="text-primary hover:text-primary/80">查看输出</summary>
-                                  <div className="mt-2 bg-muted rounded p-2 max-h-40 overflow-y-auto">
-                                    <pre className="text-xs whitespace-pre-wrap">
-                                      {item.result.output}
-                                    </pre>
+                          </TableHeader>
+                          <TableBody>
+                            {multiResult.successfulResults.map((item, index) => (
+                              <TableRow key={index}>
+                                <TableCell>{item.subnetInfo.country}</TableCell>
+                                <TableCell>{item.subnetInfo.region}</TableCell>
+                                <TableCell>{item.subnetInfo.province}</TableCell>
+                                <TableCell>{item.subnetInfo.isp}</TableCell>
+                                <TableCell>
+                                  <details className="cursor-pointer">
+                                    <summary className="text-primary hover:text-primary/80">查看输出</summary>
+                                    <div className="mt-2 bg-muted rounded p-2 max-h-40 overflow-y-auto">
+                                      <pre className="text-xs whitespace-pre-wrap">
+                                        {item.result.output}
+                                      </pre>
+                                    </div>
+                                  </details>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            {multiResult.failedResults.map((item, index) => (
+                              <TableRow key={`failed-${index}`}>
+                                <TableCell>{item.subnetInfo.country}</TableCell>
+                                <TableCell>{item.subnetInfo.region}</TableCell>
+                                <TableCell>{item.subnetInfo.province}</TableCell>
+                                <TableCell>{item.subnetInfo.isp}</TableCell>
+                                <TableCell>
+                                  <div className="text-destructive text-xs">
+                                    错误: {item.error}
                                   </div>
-                                </details>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                          {multiResult.failedResults.map((item, index) => (
-                            <TableRow key={`failed-${index}`}>
-                              <TableCell>{item.subnetInfo.country}</TableCell>
-                              <TableCell>{item.subnetInfo.region}</TableCell>
-                              <TableCell>{item.subnetInfo.province}</TableCell>
-                              <TableCell>{item.subnetInfo.isp}</TableCell>
-                              <TableCell>
-                                <div className="text-destructive text-xs">
-                                  错误: {item.error}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
-                </div>
-                </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </div>
