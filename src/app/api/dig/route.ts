@@ -1,27 +1,28 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { execDigCommand } from '@/lib/dig-service'
-import { logError } from '@/lib/log'
-import { subnetMap, SubnetInfo } from '@/lib/dig-map'
-import { validateApiParams } from '@/lib/validation'
+import { NextRequest, NextResponse } from 'next/server';
+import { execDigCommand } from '@/lib/dig-service';
+import { logError } from '@/lib/log';
+import { subnetMap, SubnetInfo } from '@/lib/dig-map';
+import { validateApiParams } from '@/lib/validation';
+import { SubnetQueryResult, FailedSubnetQueryResult } from '@/types/dig';
 
 export async function POST(request: NextRequest) {
-  let requestBody: { domain?: string; recordType?: string; subnet?: string } = {}
+  let requestBody: Record<string, unknown> = {};
   try {
-    const body = await request.json()
-    const { domain, recordType = 'A', subnet } = body
-    requestBody = { domain, recordType, subnet }
+    const body = await request.json();
+    const { domain, recordType = 'A', subnet } = body;
+    requestBody = { domain, recordType, subnet };
 
     // 验证请求参数
-    const validation = validateApiParams({ domain, recordType, subnet })
+    const validation = validateApiParams({ domain, recordType, subnet });
     if (!validation.isValid) {
       return NextResponse.json(
-        {
-          code: 'InvalidParameters',
+        { 
+          code: 'InvalidParameters', 
           message: '参数验证失败',
           errors: validation.errors
         },
         { status: 400 }
-      )
+      );
     }
 
     // 如果指定了subnet，执行单个查询
@@ -29,13 +30,13 @@ export async function POST(request: NextRequest) {
       const result = await execDigCommand({
         domain,
         recordType,
-        subnet
-      })
+        subnet,
+      });
 
       return NextResponse.json({
         success: true,
-        data: result
-      })
+        data: result,
+      });
     }
 
     // 如果没有指定subnet，查询所有subnetMap中的子网
@@ -45,56 +46,38 @@ export async function POST(request: NextRequest) {
           const result = await execDigCommand({
             domain,
             recordType,
-            subnet: subnetInfo.subnet
-          })
+            subnet: subnetInfo.subnet,
+          });
           return {
             subnetInfo,
             result,
-            success: true
-          }
+            success: true,
+          };
         } catch (error: unknown) {
           logError('Subnet query failed:', {
             subnet: subnetInfo.subnet,
             domain,
             recordType,
-            error: error.message,
-            stack: error.stack
-          })
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          });
           return {
             subnetInfo,
             error: 'Query failed',
-            success: false
-          }
+            success: false,
+          };
         }
       })
-    )
+    );
 
     // 处理结果
     const successfulResults = results
-      .filter(
-        (
-          r
-        ): r is PromiseFulfilledResult<{
-          subnetInfo: { country: string; region: string; province: string; isp: string; subnet: string }
-          result?: DigResult
-          error?: string
-          success: boolean
-        }> => r.status === 'fulfilled' && r.value.success
-      )
-      .map((r) => r.value)
+      .filter((r): r is PromiseFulfilledResult<SubnetQueryResult | FailedSubnetQueryResult> => r.status === 'fulfilled' && r.value.success)
+      .map(r => r.value as SubnetQueryResult);
 
     const failedResults = results
-      .filter(
-        (
-          r
-        ): r is PromiseFulfilledResult<{
-          subnetInfo: { country: string; region: string; province: string; isp: string; subnet: string }
-          result?: DigResult
-          error?: string
-          success: boolean
-        }> => r.status === 'fulfilled' && !r.value.success
-      )
-      .map((r) => r.value)
+      .filter((r): r is PromiseFulfilledResult<SubnetQueryResult | FailedSubnetQueryResult> => r.status === 'fulfilled' && !r.value.success)
+      .map(r => r.value as FailedSubnetQueryResult);
 
     return NextResponse.json({
       success: true,
@@ -103,33 +86,34 @@ export async function POST(request: NextRequest) {
         failedResults,
         totalQueries: subnetMap.length,
         successCount: successfulResults.length,
-        failureCount: failedResults.length
-      }
-    })
+        failureCount: failedResults.length,
+      },
+    });
   } catch (error: unknown) {
     logError('API request failed:', {
       body: requestBody,
-      error: error.message,
-      stack: error.stack
-    })
-
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
     // 根据错误类型返回不同的错误码
-    if (error.message.includes('validation') || error.message.includes('参数')) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('validation') || errorMessage.includes('参数')) {
       return NextResponse.json(
-        {
-          code: 'InvalidParameters',
-          message: '参数验证失败'
+        { 
+          code: 'InvalidParameters', 
+          message: '参数验证失败' 
         },
         { status: 400 }
-      )
+      );
     }
-
+    
     return NextResponse.json(
-      {
-        code: 'DigCommandFailed',
-        message: 'Failed to execute dig command'
+      { 
+        code: 'DigCommandFailed', 
+        message: 'Failed to execute dig command' 
       },
       { status: 500 }
-    )
+    );
   }
 }

@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server'
-import { getDigInfo } from '@/lib/dig-service'
-import { logError } from '@/lib/log'
+import { NextResponse } from 'next/server';
+import { getDigInfo } from '@/lib/dig-service';
+import { logError } from '@/lib/log';
 
 export async function GET() {
   try {
-    const digInfo = await getDigInfo()
-
+    const digInfo = await getDigInfo();
+    
     return NextResponse.json({
       success: true,
       data: {
@@ -14,20 +14,20 @@ export async function GET() {
         version: digInfo.version,
         error: digInfo.error,
         status: digInfo.available ? 'ready' : 'dig tool not found',
-        platform: process.platform
-      }
-    })
+        platform: process.platform,
+      },
+    });
   } catch (error: unknown) {
     logError('Status check failed:', {
-      error: error.message,
-      stack: error.stack
-    })
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return NextResponse.json(
       {
         code: 'StatusCheckFailed',
-        message: 'Failed to check system status'
+        message: 'Failed to check system status',
       },
       { status: 500 }
-    )
+    );
   }
 }

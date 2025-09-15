@@ -6,7 +6,7 @@ export interface DigOptions {
 
 export interface DigAnswer {
   name: string
-  type: number
+  type: string
   class: number
   ttl: number
   rdlength: number
@@ -29,7 +29,7 @@ export interface DigSubnet {
 export interface DigParsedResult {
   status: string
   header?: DigHeader
-  subnet?: DigSubnet
+  subnet?: DigSubnet | null
   answer?: DigAnswer[]
   authority?: DigAnswer[]
   additional?: DigAnswer[]
