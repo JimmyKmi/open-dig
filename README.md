@@ -4,14 +4,15 @@ The project was inspired by a friend who recommended the site <https://mdig.cc/>
 
 # Features
 
-* 🌐 Friendly Web UI for DNS queries
-* 🔧 Supports multiple DNS record types (A, AAAA, CNAME, MX, NS, TXT, SOA, PTR, SRV, etc.)
-* 🎯 Ability to specify custom DNS servers
-* 📊 Detailed query result display
-* 🚀 RESTful API
-* ⚙️ Flexible configuration for the dig executable path
+- 🌐 Friendly Web UI for DNS queries
+- 🔧 Supports multiple DNS record types (A, AAAA, CNAME, MX, NS, TXT, SOA, PTR, SRV, etc.)
+- 🎯 Ability to specify custom DNS servers
+- 📊 Detailed query result display
+- 🚀 RESTful API
+- ⚙️ Flexible configuration for the dig executable path
 
 # Document
+
 For more document, visit https://lzj.ac.cn/en/docs/open-dig/
 
 项目详细文档放在了 https://lzj.ac.cn/docs/open-dig/

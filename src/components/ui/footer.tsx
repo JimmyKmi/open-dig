@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from 'next/link'
 
 export function Footer() {
   return (
@@ -7,18 +7,18 @@ export function Footer() {
         <div className="text-center text-sm text-muted-foreground">
           <div className="space-y-1">
             <div>
-              <Link 
-                href="https://www.cursor.com/" 
-                target="_blank" 
+              <Link
+                href="https://www.cursor.com/"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 underline transition-colors"
               >
                 Cursor
-              </Link>
-              {' '}对本站亦有贡献 / 致敬{' '}
-              <Link 
-                href="https://mdig.cc" 
-                target="_blank" 
+              </Link>{' '}
+              对本站亦有贡献 / 致敬{' '}
+              <Link
+                href="https://mdig.cc"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 underline transition-colors"
               >
@@ -27,19 +27,19 @@ export function Footer() {
             </div>
             <div>
               本站开源于{' '}
-              <Link 
-                href="https://github.com/JimmyKmi/open-dig" 
-                target="_blank" 
+              <Link
+                href="https://github.com/JimmyKmi/open-dig"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 underline transition-colors"
               >
                 GitHub
-              </Link>
-              {' '}by JimmyKmi / v25.09.16
+              </Link>{' '}
+              by JimmyKmi / v25.09.16
             </div>
           </div>
         </div>
       </div>
     </footer>
-  );
+  )
 }

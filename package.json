@@ -6,10 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "install-package": "npm i --legacy-peer-deps",
     "format": "npx prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
-    "check-lint": "next lint",
+    "check-lint": "eslint .",
     "check-prettier": "npx prettier --check \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
     "check-jest": "npx jest",
     "check-security": "node scripts/security-check.js"
